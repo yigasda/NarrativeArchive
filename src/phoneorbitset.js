@@ -92,7 +92,7 @@ const HELP = {
     agents: '대화 명령, 사용자 지정 에이전트, 설치된 기능 패키지가 제공하는 설정을 구성합니다.',
     gallery: '이 채팅의 이미지와 동영상을 보고 만듭니다.',
     memory: '이전 대화에서 관련된 부분을 필요할 때 기억으로 불러옵니다. 로컬 임베딩 모델이 있으면 그것을, 없으면 임베딩 제공자를 사용합니다.',
-    trans: '이 채팅의 번역을 여기서 설정합니다. 제공자와 대상 언어가 포함됩니다.',
+    trans: '이 채팅의 번역을 여기서 설정합니다. 제공자, 대상 언어, 응답 자동 번역이 포함됩니다.',
     auto: '캐릭터가 성격, 내 상태, 선택적 스케줄에 따라 먼저 메시지를 보낼 수 있습니다. 수다스러운 캐릭터는 내가 활동하지 않을 때 더 빨리 연락합니다.',
     sum: '요청을 작게 유지하려고 대화가 스스로 요약됩니다. 하루마다 일간 요약이 만들어지고, 여러 날은 주간 요약으로 합쳐집니다. AI는 주간 요약, 이번 주의 일간 요약, 오늘의 메시지를 봅니다. 아직 끌 수 없습니다.',
 };
@@ -152,7 +152,7 @@ export function orbitSetPage(T, face) {
         + (T.open === k ? opts.map(o => `<div role="button" tabindex="0" class="os_rw ot_o ${cls}" data-k="${k}" data-v="${esc(o[0])}"><span class="os_l">${esc(o[1])}</span>${o[0] === cur ? li('check', 16, 2.4) : ''}</div>`).join('') : '');
     const seg = (k, opts, def, cls = 'na_os_seg', cur = g(k, def)) => `<div class="os_sg ot_sg">${opts.map(o => `<button type="button" class="${cls}${o[0] === cur ? ' on' : ''}" data-k="${k}" data-v="${o[0]}">${o[1]}</button>`).join('')}</div>`;
     const inp = (k, l, def, ph = '', o = {}) => `<div class="os_rw ot_i"><span class="os_l">${l}</span><span class="os_v os_qi ${o.cls || 'na_os_in'}" data-k="${k}" contenteditable="true" role="textbox"${o.num ? ' inputmode="numeric"' : ''} enterkeyhint="done" spellcheck="false" data-ph="${esc(ph)}" aria-label="${l}">${esc(String(g(k, def) ?? ''))}</span>${o.unit ? `<span class="ot_u">${o.unit}</span>` : ''}</div>`;
-    const area = (k, l, def, ph = '', o = {}) => `<div class="ot_a">${l ? `<div class="ot_al"><span>${l}</span>${o.tail || ''}</div>` : ''}<div class="os_q ot_aq${o.mono ? ' mono' : ''}"><div class="os_qi na_os_in" data-k="${k}" contenteditable="true" role="textbox" spellcheck="false" data-ph="${esc(ph)}" aria-label="${esc(o.aria || l)}" style="min-height:${(o.rows || 3) * 19}px">${esc(String(g(k, def) ?? ''))}</div></div>${o.hint ? hp(o.hint) : ''}</div>`;
+    const area = (k, l, def, ph = '', o = {}) => `<div class="ot_a">${l ? `<div class="ot_al"><span>${l}</span>${o.tail || ''}</div>` : ''}<div class="os_q ot_aq${o.mono ? ' mono' : ''}"><div class="os_qi na_os_in" data-k="${k}" contenteditable="true" role="textbox" spellcheck="false" data-ph="${esc(ph)}" aria-label="${esc(o.aria || l)}" style="min-height:${(o.rows || 3) * 19}px">${esc(String(o.value ?? g(k, def) ?? ''))}</div></div>${o.foot || ''}${o.hint ? hp(o.hint) : ''}</div>`;
     const soon = (l, icon = '', kind = 'os_go', o = {}) => `<button type="button" class="${kind} na_ob_soon${o.cls ? ` ${o.cls}` : ''}" aria-label="${esc(o.aria || l)}"${o.off ? ' disabled' : ''}>${icon ? li(icon, o.size || 13, 2.2) : ''}${l}</button>`;
     const ib = (icon, l, cls = 'na_ob_soon', at = '') => `<button type="button" class="os_ib ${cls}" aria-label="${esc(l)}" title="${esc(l)}"${at}>${li(icon, 16)}</button>`;
     const add = (l, cls = 'na_ob_soon', icon = 'plus') => `<button type="button" class="ot_add ${cls}" aria-label="${esc(l)}">${li(icon, 15, 2.2)}${l}</button>`;
@@ -191,9 +191,9 @@ export function orbitSetPage(T, face) {
                         model, S.on ? pad(load) : '']))
                         + (!open ? '' : S.mode === 'source' ? hp('키와 주소는 실리의 API 연결에 넣어 둔 것을 그대로 씁니다.') : S.mode === 'custom' ? hp('키는 이 기기에만 저장됩니다.') : ''); }).join('')
                 // 추론 레벨: 이 방의 모델이 받는 레벨만 칩으로 (마리나라의 규칙). 칩 글자는 반영이 준 name(모델에 실제로 보내는 레벨의 이름 · '끔' · '기본')을 그대로 써요.
-                //   '이 채팅' 줄은 T.rs.roomChoices. 맨 앞 칩(값 '')은 안 정함. 모델이 레벨을 안 받으면(choices가 []) 칩을 그리지 않아요
-                //   ('Orbit 전체' 줄은 마리나라에 없어서 반영 쪽이 뺐어요 (2026-11-24). 남은 줄의 모양 · 글은 디자인 세션)
-                + (T.rs ? cap('추론 레벨') + (T.rs.choices.length ? cd(...[['rsRoom', '이 채팅', T.rs.room, '전체 값 따름', T.rs.roomChoices]].map(([k, l, cur, none0, list]) => pad(`<div class="os_d oc_rl">${l}</div><div class="ot_r ot_w oc_pk oc_rs">${[{ value: '', name: none0 }, ...(list || [])].map(c => `<button type="button" class="ot_chip${c.value === cur ? ' strong' : ''} na_os_rs" data-k="${k}" data-v="${esc(c.value)}" aria-pressed="${c.value === cur}"${c.title ? ` title="${esc(c.title)}"` : ''}>${esc(c.name)}</button>`).join('')}</div>`)))
+                //   칩은 T.rs.roomChoices 한 줄(채팅마다 하나: 마리나라 chatParameters). 맨 앞 칩(값 '')은 안 정함. 모델이 레벨을 안 받으면(choices가 []) 칩을 그리지 않아요
+                //   ('Orbit 전체' 줄은 마리나라에 없어서 반영 쪽이 뺐어요 (2026-11-24). 줄이 하나라 '이 채팅' 꼬리표도 뺐어요)
+                + (T.rs ? cap('추론 레벨') + (T.rs.choices.length ? cd(...[['rsRoom', T.rs.room, '안 정함', T.rs.roomChoices]].map(([k, cur, none0, list]) => pad(`<div class="ot_r ot_w oc_pk oc_rs">${[{ value: '', name: none0 }, ...(list || [])].map(c => `<button type="button" class="ot_chip${c.value === cur ? ' strong' : ''} na_os_rs" data-k="${k}" data-v="${esc(c.value)}" aria-pressed="${c.value === cur}"${c.title ? ` title="${esc(c.title)}"` : ''}>${esc(c.name)}</button>`).join('')}</div>`)))
                     + hp(T.rs.effort ? `지금 이 채팅은 <b>${esc(T.rs.choices.find(c => c.value === T.rs.effort)?.name || T.rs.effort)}</b>을(를) 씁니다.` : '아직 정하지 않았습니다.')
                     : hp(T.rs.why === 'st' ? '실리가 이 연결 · 모델에는 추론 레벨을 보내지 않습니다.' : T.rs.why === 'main' ? '실리의 지금 연결을 그대로 쓰는 방입니다. 추론 레벨은 실리에서 정합니다.' : `${T.rs.model ? `<b>${esc(T.rs.model)}</b>은(는)` : '이 모델은'} 추론 레벨을 받지 않습니다.`)) : '')   // (칩이 없는 이유: T.rs.why = 'model' | 'st' | 'main')
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
@@ -240,7 +240,7 @@ export function orbitSetPage(T, face) {
         linked: () => H + cd(tg('cross', '채팅 간 인식', '캐릭터가 자신의 다른 채팅에서 일어나는 일을 압니다', true))
             + (T.open === 'linkPick' ? cd(pad(`<div class="ot_r"><div class="os_q ot_q0" style="flex:1">${li('search', 16)}<div class="os_qi na_os_in" data-k="linkQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="롤플레이 채팅 검색" aria-label="롤플레이 채팅 검색">${esc(g('linkQ', ''))}</div></div>${ib('x', '선택기 닫기', 'na_os_sel', ' data-k="linkPick"')}</div>`)) : `<button type="button" class="ot_add na_os_sel" data-k="linkPick" aria-label="롤플레이에 연결">${li('plus', 15, 2.2)}롤플레이에 연결</button>`),
         // 로어북 (LorebooksSection)
-        lore: () => H + cd(inp('loreBudget', '로어북 토큰 예산', '', '기본값', { num: true })) + hp('이 채팅에서 활성화된 로어북 검색 결과의 컨텍스트 상한입니다. 0으로 설정하면 제한이 없습니다.')
+        lore: () => H + cd(inp('loreBudget', '로어북 토큰 예산', '8192', '', { num: true })) + hp('이 채팅에서 활성화된 로어북 검색 결과의 컨텍스트 상한입니다. 0으로 설정하면 제한이 없습니다.')
             + none('이 채팅에 활성화된 로어북이 없습니다.')
             + (T.open === 'lorePick' ? cd(pad(`<div class="ot_r"><div class="os_q ot_q0" style="flex:1">${li('search', 16)}<div class="os_qi na_os_in" data-k="loreQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="로어북 검색…" aria-label="로어북 검색">${esc(g('loreQ', ''))}</div></div>${ib('x', '선택기 닫기', 'na_os_sel', ' data-k="lorePick"')}</div>`), none('사용할 수 있는 로어북이 이미 모두 여기에 활성화되어 있습니다.')) : `<button type="button" class="ot_add na_os_sel" data-k="lorePick" aria-label="로어북 추가">${li('plus', 15, 2.2)}로어북 추가</button>`),
         // 활성 컨텍스트 (ActiveLorebookEntriesContent, 읽기 전용)
@@ -269,17 +269,21 @@ export function orbitSetPage(T, face) {
         // 이 채팅의 기억 (MemoryRecallMemoriesModal)
         memlist: () => `<div class="ot_r"><span class="ot_cnt"><b>0</b> 기억 조각</span><i class="os_sp"></i>${ib('upload', '기억 내보내기', 'na_ob_soon', ' disabled')}${ib('download', '기억 가져오기')}${soon('모두 다시 벡터화', 'refresh-cw', 'os_go', { aria: '모든 기억 다시 벡터화' })}${ib('trash-2', '모든 기억 지우기', 'na_ob_soon', ' disabled')}</div>`
             + none('이 채팅에는 아직 회상 기억이 만들어지지 않았습니다. 생성 후 메시지 5개씩 묶어 만들어집니다.'),
-        // 번역 (TranslationSection)
-        trans: () => { const sv = g('trSvc', 'google'), ai = sv === 'ai';
-            return H + cd(sel('trSvc', '서비스', [['google', 'Google 번역'], ['deepl', 'DeepL API'], ['deeplx', 'DeepLX (자체 호스팅)'], ['ai', 'AI (연결 사용)']], 'google'), inp('trIn', '모델 언어', '', ai ? 'English' : 'en'), inp('trOut', '내 언어', '', ai ? 'Korean' : 'ko'))
-                + hp(`내가 보내는 메시지는 모델 언어로, 모델의 응답은 내 언어로 번역됩니다. ${ai ? 'English, Japanese, Spanish 같은 언어 이름을 쓰세요.' : 'en, ja, es, de, fr, zh, ko 같은 언어 코드를 쓰세요.'}`)
-                + (ai ? cd(sel('trConn', '연결', [['', '연결 선택…'], ...(T.trConns || []).map(c => [c.id, c.name || c.model || c.id])], '')) + hp('번역에 사용할 AI 연결')
-                    + area('trInP', '보내는 메시지 프롬프트', '', '', { rows: 5, mono: true, tail: `<i class="os_sp"></i>${g('trInP', '') ? soon('복원', 'rotate-ccw', 'os_go', { aria: '기본 프롬프트 복원' }) : ''}`, hint: 'AI 번역이 쓰는 시스템 프롬프트입니다. {{targetLanguage}}는 위의 해당 언어로 바뀝니다.' })
-                    + area('trOutP', '받는 응답 프롬프트', '', '', { rows: 5, mono: true, tail: `<i class="os_sp"></i>${g('trOutP', '') ? soon('복원', 'rotate-ccw', 'os_go', { aria: '기본 프롬프트 복원' }) : ''}` }) : '')
-                + (sv === 'deepl' ? cd(inp('trKey', 'DeepL API 키', '', 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx')) : '')
-                + (sv === 'deeplx' ? cd(inp('trUrl', 'DeepLX URL', '', 'http://localhost:1188')) + hp('자체 호스팅한 DeepLX 인스턴스의 URL (예: http://localhost:1188)') : '')
+        // 번역 (마리나라 features/chat-settings/sections/TranslationSection.tsx). DeepL · DeepLX는 소망이 뺐어요(Google 번역 · AI만)
+        //   T.trField: 연결 칸의 { label, note } (마리나라 ConnectionSelect: 이름 · [묶음 또는 다른 모델 · via] · 이 채팅에 설정) · T.trDefault: 기본 프롬프트
+        //   T.trTok: { trInP, trOutP } 프롬프트 칸 아래의 "~N 토큰" · T.trDef: { has (저장한 기본값이 있나), busy: 'save' | 'forget' | '' }
+        trans: () => { const sv = g('trSvc', 'google'), ai = sv === 'ai', F = T.trField || { label: '연결 선택…', note: '' }, D = T.trDef || {};
+            const lang = (k, l, d) => cd(inp(k, l, '', ai ? 'English' : 'en')) + hp(`${d} ${ai ? 'English, Japanese, Spanish 같은 언어 이름을 사용하세요.' : 'en, ja, es, de, fr, zh, ko 같은 언어 코드를 사용하세요.'}`);
+            // 프롬프트 칸: 내 것이 없으면 기본 지시문을 보여 줘요. 내 것이 있을 때만 복원. 칸 아래 오른쪽에 토큰 어림
+            const prompt = (k, l) => area(k, l, '', '', { rows: 5, mono: true, value: g(k, '') || T.trDefault || '', tail: `<i class="os_sp"></i>${g(k, '') ? `<button type="button" class="os_go na_os_trrst" data-k="${k}" title="기본 프롬프트 복원">${li('rotate-ccw', 13, 2.2)}복원</button>` : ''}`,
+                foot: `<div class="os_d ot_tok na_os_tok" data-k="${k}">${esc((T.trTok || {})[k] || '')}</div>`, hint: 'AI 번역이 쓰는 시스템 프롬프트입니다. {{targetLanguage}}는 위의 해당 언어로 바뀝니다.' });
+            const conn = `<div role="button" tabindex="0" class="os_rw ot_t na_os_trconn" aria-haspopup="dialog" aria-label="연결: ${esc(F.label)}"><span class="os_l">연결</span><span class="os_v oc_cv">${esc(F.label)}${F.note ? `<small> · ${esc(F.note)}</small>` : ''}</span><i class="os_ch">${li('chevron-down', 16)}</i></div>`;
+            const busy = !!D.busy, defBtns = `<div class="ot_r ot_w"><button type="button" class="os_go na_os_trdef"${busy ? ' disabled' : ''}>${li('save', 13, 2.2)}${D.busy === 'save' ? '저장 중…' : '번역기 기본값 저장'}</button>${D.has ? `<button type="button" class="os_go na_os_trforget"${busy ? ' disabled' : ''}>${li('rotate-ccw', 13, 2.2)}저장한 기본값 잊기</button>` : ''}</div>`;
+            return H + cd(sel('trSvc', '서비스', [['google', 'Google 번역'], ['ai', 'AI (연결 사용)']], 'google'))
+                + lang('trIn', '모델 언어', '내가 보내는 메시지는 이 언어로 번역됩니다.') + lang('trOut', '내 언어', '모델의 응답은 이 언어로 번역됩니다.')
+                + (ai ? cd(conn) + hp('번역에 사용할 AI 연결') + prompt('trInP', '보내는 메시지 프롬프트') + prompt('trOutP', '받는 응답 프롬프트') : '')
                 + cap('') + cd(tg('trAuto', '응답 자동 번역', '생성 후 AI 응답을 자동으로 번역합니다.', false), tg('trMine', '내 메시지 번역', '보내기 전에 내 메시지를 대상 언어로 번역합니다.', false), tg('trBtn', '초안 번역 버튼 표시', '보내기 옆에 번역 바로가기를 추가합니다. 대화에서는 입력창 스마일 메뉴의 도구 탭에서 초안 번역을 늘 쓸 수 있습니다.', false), tg('trOnly', '번역만 표시', '메시지가 번역되면 원문과 번역을 함께 보여 주는 대신 번역만 그 자리에 보여 줍니다.', false))
-                + hp('이 번역 설정을 모든 모드의 새 채팅용으로 저장합니다. 설정 마법사와 채팅 프로필의 설정이 먼저 적용됩니다. 기존 채팅은 그대로입니다.') + `<div class="ot_r ot_w">${soon('번역기 기본값 저장', 'save')}</div>`; },
+                + hp('이 번역 설정을 모든 모드의 새 채팅용으로 저장합니다. 설정 마법사와 채팅 프로필의 설정이 먼저 적용됩니다. 기존 채팅은 그대로입니다.') + defBtns; },
         // 자율 메시지 (6921–7127): 켜기 → 채팅 체크인 제한, 캐릭터 간 대화(단체), 스케줄, 상태 줄 + 재생성, 시간대, 스케줄 편집
         auto: () => { const A = T.auto, S = T.sched, son = !!S.on, num = A.cap !== '';
             // (T.srv: 서버 플러그인이 돌 때만 와요. can이면 실리를 닫아도 이 방에 오고, 아니면 why에 이유. 플러그인이 없으면 아무 표시도 없어요)
@@ -299,7 +303,7 @@ export function orbitSetPage(T, face) {
         // 자동 요약 (10009–10175)
         sum: () => { const sem = !!g('semOn', false);
             return H + cd(nav('sumedit', '요약 편집', '캐릭터가 이 채팅에서 기억하는 내용을 검토하고 편집합니다.', 'pencil'))
-                + cd(tg('semOn', '의미 기반 요약 검색', '최근 주는 컨텍스트에 두고, 설정된 임베딩 모델과 아래 한도로 관련된 이전 주를 불러옵니다. 임베딩을 쓸 수 없으면 모든 요약이 컨텍스트에 남습니다.', false), ...(sem ? [inp('semRecent', '최근 주', '4', '', { num: true }), inp('semOlder', '이전 주', '4', '', { num: true }), inp('semMin', '관련도 임계값', '0.30', '')] : []))
+                + cd(tg('semOn', '의미 기반 요약 검색', '최근 주는 컨텍스트에 두고, 설정된 임베딩 모델과 아래 한도로 관련된 이전 주를 불러옵니다. 임베딩을 쓸 수 없으면 모든 요약이 컨텍스트에 남습니다.', false), ...(sem ? [inp('semRecent', '최근 주', '2', '', { num: true }), inp('semOlder', '이전 주', '3', '', { num: true }), inp('semMin', '관련도 임계값', '0.15', '')] : []))
                 + cap('') + cd(sel('sumConn', '요약 제공자', [['', '에이전트 기본값 또는 채팅 모델']], ''), inp('sumMax', '최대 출력 크기', '4096', '', { num: true }))
                 + hp('수동 및 자동 요약에 사용할 모델 제공자를 고릅니다.')
                 + cd(sel('rollHour', '하루 전환 시각', HOURS, '4')) + hp('이 시각 전에 보낸 메시지는 전날로 칩니다. 절대 대화하지 않는 시간을 고르면 늦은 밤 대화가 중간에 끊기지 않습니다.')
@@ -317,12 +321,14 @@ export function orbitSetPage(T, face) {
 // 탭 둘: 모델(지금 줄 · 검색 · 맨 화면[즐겨찾기 · 계정] ↔ 계정 화면[그 계정의 즐겨찾기 · 모든 모델]) · 페르소나(검색 · 없음 · 목록).
 // 무작위(주사위 · 무작위 풀)는 소망이 뺐고, 컨텍스트 막대는 값을 줄 함수가 없어 W.ctx가 있을 때만 그려요.
 // W: { tab, q, pq, drilled, pane, order, stars: [id], conns: [{ id, name, sub, roles: [] }], personas: [{ id, name, title, src, cur }], limit, ctx: { used, max, pct } | null }
+// W.job: 한 기능의 모델 고르기 (마리나라 ModelPicker: 몸통은 이 빠른 전환기 그대로, 제목 'Model for {{job}}'). { title, defaultLabel }
+//   탭 없이 모델만, 지금 줄은 '지금', 기본 단추는 defaultLabel(비었으면 지금 줄이 그 글). 실리 연결 · ID 사용 줄은 없어요(그 기능의 연결 목록에 없어서)
 export function orbitSwitcher(W) {
     const none = t => `<div class="os_no">${t}</div>`, cap = (t, n) => `<div class="os_cap ow_cap"><span>${t}</span>${n === undefined ? '' : `<span class="cg_num">${n}</span>`}</div>`, cd = (...r) => `<div class="os_cd">${r.join('')}</div>`;
     const tabs = `<div class="os_sg ow_sg">${[['models', '모델'], ['personas', '페르소나']].map(([k, t]) => `<button type="button" class="na_ow_tab${W.tab === k ? ' on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>`;
     let body = '';
     if (W.tab === 'models') {
-        const all = W.conns.filter(c => c.name && c.name !== '모델 없음'), cur = W.curName ? null : (all.find(c => c.id === W.cur) || null), nowLabel = W.follows ? '지금 · 메인을 따름' : '지금 · 이 채팅만', stars = new Set(W.stars), q = W.q.trim().toLowerCase();
+        const all = W.conns.filter(c => c.name && c.name !== '모델 없음'), cur = W.curName ? null : (all.find(c => c.id === W.cur) || null), nowLabel = W.job ? '지금' : W.follows ? '지금 · 메인을 따름' : '지금 · 이 채팅만', stars = new Set(W.stars), q = W.q.trim().toLowerCase();
         const groups = []; for (const c of all) { const k = c.sub || c.name; let g = groups.find(x => x.key === k); if (!g) groups.push(g = { key: k, name: k, rows: [] }); g.rows.push(c); }
         const groupOf = c => groups.find(g => g.rows.includes(c)), starred = W.stars.map(id => all.find(c => c.id === id)).filter(Boolean);
         const paneGroup = W.drilled ? groups.find(g => g.key === W.pane) : null, paneKey = paneGroup?.key, paneSrc = paneGroup?.rows[0]?.src || '';   // paneSrc: 실리 연결 종류의 화면이면 그 종류의 id   // (즐겨찾기 화면은 따로 없어요: 맨 화면 맨 위에 있어요, 소망)
@@ -333,17 +339,17 @@ export function orbitSwitcher(W) {
                 + (o.now ? '' : ord && st ? `<button type="button" class="os_ib na_ow_mv" data-id="${esc(c.id)}" data-by="-1" aria-label="${esc(c.name)} 위로 이동"${W.stars.indexOf(c.id) <= 0 ? ' disabled' : ''}>${li('arrow-up', 15)}</button><button type="button" class="os_ib na_ow_mv" data-id="${esc(c.id)}" data-by="1" aria-label="${esc(c.name)} 아래로 이동"${W.stars.indexOf(c.id) >= W.stars.length - 1 ? ' disabled' : ''}>${li('arrow-down', 15)}</button>`
                     : `${st ? `<button type="button" class="os_ib na_ob_soon" aria-label="${esc(c.name)} 설정">${li('sliders-horizontal', 15)}</button>` : ''}<button type="button" class="os_ib ow_st na_ow_star${st ? ' on' : ''}" data-id="${esc(c.id)}" aria-pressed="${st}" aria-label="${esc(c.name)} 즐겨찾기">${li('star', 16)}</button>`) + '</div>'; };
         const orderBtn = `<div class="ot_r ot_end ow_ord"><button type="button" class="os_go na_ow_order" aria-pressed="${!!W.order}">${W.order ? '완료' : '순서 편집'}</button></div>`;
-        const dflt = W.follows ? '' : `<button type="button" class="os_go na_ow_default" aria-label="기본값 사용">${li('house', 13, 2.2)}기본값 사용</button>`;
+        const dfl = W.job ? W.job.defaultLabel : '기본값 사용', dflt = W.follows ? '' : `<button type="button" class="os_go na_ow_default" aria-label="${esc(dfl)}">${li('house', 13, 2.2)}${esc(dfl)}</button>`;
         // (목록에 없는 모델(ID를 직접 넣은 것)도 지금 줄과 같은 모양: 이름 위, '지금 · …' 아래)
-        const now = `<div class="ow_now${dflt ? ' d' : ''}">${cur ? row(cur, { now: true, sub: [nowLabel, groupOf(cur)?.name].filter(Boolean).join(' · ') }) : `<div class="os_pp ow_row"><div class="ow_pick"><span class="ot_x"><span class="os_l">${W.curName ? esc(W.curName) : '모델 선택'}</span><span class="os_d">${nowLabel}</span></span></div></div>`}${dflt}</div>`;
-        const search = `<div class="os_q ow_q">${li('search', 16)}<div class="os_qi na_ow_q" contenteditable="true" role="textbox" enterkeyhint="go" spellcheck="false" autocapitalize="off" data-ph="${paneGroup ? `${esc(paneGroup.name)} 검색...` : '모델 검색 또는 ID 붙여넣기…'}" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(W.q)}</div>${W.q ? `<button type="button" class="os_ib na_ow_qx" aria-label="검색 지우기">${li('x', 15)}</button>` : ''}</div>`;
+        const now = `<div class="ow_now${dflt ? ' d' : ''}">${cur ? row(cur, { now: true, sub: [nowLabel, groupOf(cur)?.name].filter(Boolean).join(' · ') }) : `<div class="os_pp ow_row"><div class="ow_pick"><span class="ot_x"><span class="os_l">${W.curName ? esc(W.curName) : W.job && W.follows ? esc(W.job.defaultLabel) : '모델 선택'}</span><span class="os_d">${nowLabel}</span></span></div></div>`}${dflt}</div>`;
+        const search = `<div class="os_q ow_q">${li('search', 16)}<div class="os_qi na_ow_q" contenteditable="true" role="textbox" enterkeyhint="go" spellcheck="false" autocapitalize="off" data-ph="${paneGroup ? `${esc(paneGroup.name)} 검색...` : W.job ? '모델 검색…' : '모델 검색 또는 ID 붙여넣기…'}" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(W.q)}</div>${W.q ? `<button type="button" class="os_ib na_ow_qx" aria-label="검색 지우기">${li('x', 15)}</button>` : ''}</div>`;
         const add = cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`);
         if (!all.length) body = now + none('아직 모델이 없습니다. 계정을 추가하면 생깁니다.') + add;
         else if (q) {   // 검색 결과: 즐겨찾기 먼저, 계정별로, 마지막에 친 글자를 모델 ID로 (계정을 골라 둔 상태면 그 계정 안에서만)
             const hit = c => `${c.name} ${c.sub}`.toLowerCase().includes(q), scope = paneGroup ? paneGroup.rows : all, hits = scope.filter(hit), typed = W.q.trim(), target = paneGroup || (cur && groupOf(cur)) || groups[0];
             const secs = paneGroup ? [['즐겨찾기', hits.filter(c => stars.has(c.id)), false], ['모든 모델', hits.filter(c => !stars.has(c.id)), false]]
                 : [['즐겨찾기', hits.filter(c => stars.has(c.id)), true], ...groups.map(g => [esc(g.name), hits.filter(c => !stars.has(c.id) && g.rows.includes(c)), false])];
-            const use = target && !/\s/.test(typed) && !all.some(c => c.name === typed) ? cd(`<div role="button" tabindex="0" class="os_rw ot_t na_ow_use" data-id="${esc(target.rows[0].id)}" data-m="${esc(typed)}" aria-label="“${esc(typed)}” 사용">${li('search', 17)}<span class="ot_x"><span class="os_l">“${esc(typed)}” 사용</span><span class="os_d">${esc(target.name)}에 이 ID 추가</span></span></div>`) : '';
+            const use = !W.job && target && !/\s/.test(typed) && !all.some(c => c.name === typed) ? cd(`<div role="button" tabindex="0" class="os_rw ot_t na_ow_use" data-id="${esc(target.rows[0].id)}" data-m="${esc(typed)}" aria-label="“${esc(typed)}” 사용">${li('search', 17)}<span class="ot_x"><span class="os_l">“${esc(typed)}” 사용</span><span class="os_d">${esc(target.name)}에 이 ID 추가</span></span></div>`) : '';
             body = now + search + secs.filter(s => s[1].length).map(([l, r, away]) => cap(l, r.length) + cd(...r.map(c => row(c, { away })))).join('') + use
                 + (hits.length || use ? '' : none('일치하는 모델이 없습니다.')) + (paneGroup ? cd(`<div role="button" tabindex="0" class="os_rw na_ow_qall" aria-label="모든 계정 검색">${li('search', 17)}<span class="os_l">모든 계정 검색</span></div>`) : ''); }
         else if (!paneGroup) body = now + search   // 맨 화면: 즐겨찾기(맨 위) · 계정들 · 계정 추가
@@ -366,7 +372,8 @@ export function orbitSwitcher(W) {
                 : (q ? '' : cd(pr({ id: '', name: '없음', title: '페르소나가 선택되지 않았습니다' }, !any, `<span class="ow_av none">${li('ban', 14)}</span>`)))
                     + (list.length ? cd(...list.slice(0, W.limit).map(p => pr(p, p.cur, ava(p))), ...(list.length > W.limit ? [`<button type="button" class="os_rw ot_c na_ow_more">${Math.min(50, list.length - W.limit)}개 더 보기</button>`] : [])) : ''));
     }
-    return `<div class="ob_shade na_ow_x"></div><div class="ob_sheet os_sh ow"><i class="ob_grab"></i><div class="os_hd"><b>빠른 전환기</b><button type="button" class="os_ib na_ow_x" aria-label="빠른 전환기 닫기">${li('x', 19)}</button></div><div class="os_bd">${tabs}${body}</div></div>`;
+    const ttl = W.job ? W.job.title : '빠른 전환기';
+    return `<div class="ob_shade na_ow_x"></div><div class="ob_sheet os_sh ow"><i class="ob_grab"></i><div class="os_hd"><b>${esc(ttl)}</b><button type="button" class="os_ib na_ow_x" aria-label="${esc(ttl)} 닫기">${li('x', 19)}</button></div><div class="os_bd">${W.job ? '' : tabs}${body}</div></div>`;
 }
 
 // 생각 보기 (마리나라 MessageThinkingModal): 제목 · 복사 단추 · 뇌 아이콘 + 생각 글. 저장된 생각이 없으면 안내만

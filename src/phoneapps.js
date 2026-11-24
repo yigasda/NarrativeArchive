@@ -722,7 +722,8 @@ export function setDate(p, now, m = null, ui = {}) {
       </div>
       ${axInd()}`;
 }
-// 설정 › 말투 (docs/mockups/phone-voice A+D): the voice table the translator sends with every translation (p.koVoice:
+// 설정 › 말투 (docs/mockups/phone-voice A+D): the voice table the translator sends with every translation of the phone's
+// other apps — not the messenger's (Orbit uses Marinara's translation as it is: "메신저 번역에는 쓰지 않습니다.", 소망) (p.koVoice:
 // { who, style, by }; an old { from, to, style } reads from as who), how each person sounds to others. What 소망 set
 // first, with 사람 추가; the translator's (by: 'model') under it, its names a little grey. A row opens the alert to edit
 // (and becomes 소망's); slid left, 삭제
@@ -752,7 +753,7 @@ export function setVoice(p, now, pick = null, busy = false) {
         ${sec('내가 정한 말투', 'mine', mine)}
         <div class="ax_card">${mine.map(row).join('')}${pick ? (mine.length ? '' : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">정한 사람이 없어요</span></span></div>') : '<div role="button" tabindex="0" class="ax_rw ax_rwn" data-go="setvoiceadd"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div>'}</div>
         ${sec('이야기에서 뽑은 말투', 'auto', auto)}<div class="ax_card">${auto.length ? auto.map(row).join('') : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">뽑은 사람이 없어요</span></span></div>'}</div>
-        <div class="ax_foot">고치면 내가 정한 말투로 옮겨져요.</div>
+        <div class="ax_foot">고치면 내가 정한 말투로 옮겨져요.<br>메신저 번역에는 쓰지 않습니다.</div>
         ${pick ? '' : `<div class="ax_sec">언어</div><div class="ax_card">${[['texts', '자주 쓰는 언어'], ['knows', '가끔 쓰는 언어']].map(([k, t]) => `<button type="button" class="ax_rw" data-go="setlang" data-i="${k}"><span class="ax_tx"><span class="ax_n">${t}</span></span><span class="ax_v ax_langv">${esc((p.langs?.[k] || []).join(', '))}</span>${axChev}</button>`).join('')}</div>`}
         <i class="ax_pad"></i>
       </div>
