@@ -44,6 +44,8 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     const { kitOf, cardsFor } = await import('../src/phone2kit.js');
     const { intentWhy, chatIdOf } = await import('../src/phone2sched.js');
     const { VERSION } = await import('../src/core.js');
+    // 번역 (마리나라의 번역 기능: src/phone2translate.js). 답장 뒤의 자동 번역은 일꾼이 해요 (마리나라는 서버가 해요)
+    const TR = await import('../src/phone2translate.js');
     // 실리 브라우저의 요청 코드를 옮긴 것 (plugin/st: 실리 1.19.1 그대로). naload.js가 먼저예요: power-user.js를 script.js보다 먼저 불러요(실리의 차례)
     const STL = await import('./st/naload.js');
     // (SillyTavern's connection check — online_status, the model lists, the chosen model's correction —, its replies kept while the
@@ -286,6 +288,24 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     // phone2go.js liveGo의 lock: 일꾼이 그 방에 들어가요 → 놓기 | null (브라우저가 쥐고 있어요). 일꾼의 것은 시간 제한이 없어서 이어 잡지 않아요
     const serverLock = sid => ({ enter: async room => (claim(sid, room, 'server').ok ? () => release(sid, room, 'server') : null), renew: async () => {} });
 
+    // ---- 답장 뒤의 자동 번역 (마리나라 generate.routes.ts dispatchAutomaticTranslations 1990~2029: 답이 저장된 뒤 서버가, 생성 자물쇠를
+    // 쥐지 않고, 저장된 답의 말을 차례로. 실패는 경고 줄만). phone2go.js liveGo의 translate 자리에 줘요: 그 답의 방 · 말 id들 → 다 끝나면 풀리는 약속.
+    // 말 하나마다 그 세계를 다시 읽은 자리에서 해요(withWorld: 번역 연결이 실리의 것일 수 있어요). 저장이 브라우저와 부딪히면(409) 다시 읽고 받은 번역을
+    // 그대로 넣어요(번역은 다시 묻지 않아요). 그동안 /auto/status의 방마다 translating이 true예요 (마리나라 /generate/status의 translating)
+    const translateAfter = (sid, real) => (roomId, ids) => {
+        const config = TR.translationConfigOf(real, roomId), chatId = chatIdOf(real, roomId);
+        const run = async messageId => {
+            let cached = null;
+            for (let attempt = 0; ; attempt++) {
+                const e = await app.open(sid);
+                if (!e) return null;
+                try { return await withWorld(e, () => TR.translateGenerated(e.real, chatId, messageId, config, { save: () => app.write(e), cached, keep: t => { cached = t; } })); }
+                catch (err) { if (err?.code === 409 && attempt < 2) continue; throw err; }
+            }
+        };
+        return TR.dispatchAutomaticTranslations({ chatId, ids, config, run, log: (fmt, id, err) => logger.warn(err instanceof Error ? err : {}, fmt, id) });
+    };
+
     // 한 번에 하나: 그 세계의 실리 것을 끼우고 일을 해요
     let line = Promise.resolve(), app = null;
     function withWorld(entry, job) {
@@ -415,7 +435,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             const before = charSaid(w, room);
             app.activeGenerations.set(chatId, true);
             let out;
-            try { out = await G.liveGo(real, { lock: serverLock(had.sid), server: true }); }
+            try { out = await G.liveGo(real, { lock: serverLock(had.sid), server: true, translate: translateAfter(had.sid, real) }); }
             finally { app.activeGenerations.delete(chatId); }
             // (the scheduler pauses this chat itself on an error: server-autonomous-scheduler.service.ts recordFailureBackoff)
             if (out?.autoError) return { statusCode: 200, payload: SSE.error(out.autoError) };
@@ -473,7 +493,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
                             return out;
                         };
                         const before = new Set(due().map(j => j.id));
-                        const out = await G.liveGo(e.real, { lock: { enter, renew: lock.renew }, server: true });
+                        const out = await G.liveGo(e.real, { lock: { enter, renew: lock.renew }, server: true, translate: translateAfter(sid, e.real) });
                         if (out?.ran) ran += 1;
                         for (const j of liveWorld(e.real)?.queue.jobs || []) {
                             if (!before.has(j.id)) continue;
@@ -494,15 +514,21 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         nextDue = next;
         return ran;
     }
-    // 화면에 보여 줄 것: 이 저장의 방마다 서버가 돌릴 수 있나 → [{ id, room, can, why }]
+    // 화면에 보여 줄 것: 이 저장의 방마다 서버가 돌릴 수 있나 → [{ id, room, can, why, translating }]
+    //   translating: 그 방에서 일꾼의 자동 번역이 아직 도는 중 (마리나라 /generate/status의 translating: 브라우저는 그게 끝난 뒤 알려요 — phone2keepon.js)
+    //   (while a translation runs the worker's line is busy with it: the answer comes at once then, with what was last worked out for
+    //    can · why — the browser asks every 1.5 seconds, as Marinara's status route answers at once)
+    const lastStatus = new Map();
     async function status(sid) {
         const e = await app.open(String(sid)), w = e && liveWorld(e.real);
         if (!w) return [];
-        const rooms = Object.keys(w.messenger?.rooms || {});
+        const rooms = Object.keys(w.messenger?.rooms || {}), tr = room => TR.liveTranslating(e.real, room);
+        if (rooms.some(tr)) { const had = lastStatus.get(String(sid)) || []; return rooms.map(room => ({ ...(had.find(r => r.room === room) || { id: chatIdOf(e.real, room), room, can: true, why: '' }), translating: tr(room) })); }
         const no = await blocked(e.real);
-        if (no) return rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: no }));
-        try { return await withWorld(e, async () => { const out = []; for (const room of rooms) { const why = await cannot(e.real, room); out.push({ id: chatIdOf(e.real, room), room, can: !why, why }); } return out; }); }
-        catch (err) { if (err?.statusCode === 400) return rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: String(err.message) })); throw err; }
+        const keep = rows => { lastStatus.set(String(sid), rows); if (lastStatus.size > 50) lastStatus.delete(lastStatus.keys().next().value); return rows; };
+        if (no) return keep(rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: no, translating: tr(room) })));
+        try { return keep(await withWorld(e, async () => { const out = []; for (const room of rooms) { const why = await cannot(e.real, room); out.push({ id: chatIdOf(e.real, room), room, can: !why, why, translating: tr(room) }); } return out; })); }
+        catch (err) { if (err?.statusCode === 400) return keep(rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: String(err.message), translating: tr(room) }))); throw err; }
     }
     // 브라우저가 이 저장을 열어 두고 있어요 (30초마다): 그 방들에는 스케줄러가 75초 동안 먼저 말을 걸지 않아요 (마리나라의 /activity/presence)
     async function presence(sid, state) {

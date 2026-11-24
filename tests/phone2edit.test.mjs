@@ -1,4 +1,4 @@
-// 폰 2 메신저의 말 고치기 (src/phone2edit.js): 지우기 · 답장 넘기기(스와이프) · 한국어 다시 받기의 고르기와 요청 글 · 답 넣기만 봐요.
+// 폰 2 메신저의 말 고치기 (src/phone2edit.js): 지우기 · 글 고치기 · 답장 넘기기(스와이프). 번역은 tests/phone2translate.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -14,11 +14,11 @@ function world() {
     const a = L.ensureRoom(m, ['Mara']), g = L.ensureRoom(m, ['Mara', 'Ivo']);
     const say = (room, from, text, at, extra = {}) => { const x = { id: `x${room.messages.length}${room.id}`, n: L.liveNo(w), from, text, at, ...extra }; room.messages.push(x); return x; };
     L.sendLive(m, a.id, 'Are you up?', 1000);
-    say(a, 'Mara', 'Barely.', 2000, { ko: '겨우.' });
+    say(a, 'Mara', 'Barely.', 2000, { extra: { translation: '겨우.', translationSource: 'Barely.' } });
     L.sendLive(m, a.id, 'Dinner?', 3000);
-    say(a, 'Mara', 'Did you eat', 4000, { ko: '밥 먹었어', state: 'office' });
+    say(a, 'Mara', 'Did you eat', 4000, { extra: { translation: '밥 먹었어', translationSource: 'Did you eat' }, state: 'office' });
     say(a, 'Mara', '', 4001, { act: true, does: [{ app: 'notes', what: 'writes a list' }] });
-    say(a, 'Mara', 'Answer me', 4002, { ko: '대답해', told: 9 });
+    say(a, 'Mara', 'Answer me', 4002, { extra: { translation: '대답해', translationSource: 'Answer me', translationHidden: true }, told: 9 });
     return { m, w, a, g, say };
 }
 const texts = r => r.messages.map(x => x.text || (x.act ? '(act)' : ''));
@@ -37,20 +37,15 @@ test('지우기: 고른 말만 지우고 나머지는 번호 · 순서 · 표시
     assert.throws(() => E.dropMessages({ phones: {} }, a.id, ['x']), /폰 2가 없습니다/);
 });
 
-test('글 고치기: 원문을 바꾸면 한국어는 지워지고, 한국어만도 고쳐요. 번호 · 시간 · 반응은 그대로; 빈 글 · 말 없는 메시지는 안 돼요', () => {
-    const { m, w, a } = world(), [mine, hers, , , act] = a.messages, was = { ...hers };
+test('글 고치기: 원문만 바꿔요. 번역(extra)은 마리나라처럼 그대로; 번호 · 시간 · 반응은 그대로; 빈 글 · 말 없는 메시지는 안 돼요', () => {
+    const { m, w, a } = world(), [mine, hers, , , act] = a.messages, was = { ...hers, extra: { ...hers.extra } };
     hers.reacts = [{ by: 'Ren', e: '❤️', at: 1 }];
-    // 원문: 한국어는 지워져요
+    // 원문: 번역 칸은 그대로 남아요 (마리나라의 대화 모드는 글을 고쳐도 번역을 안 건드려요: 번역 단추가 원문이 바뀐 걸 봐요)
     assert.equal(E.editMessage(m, a.id, hers.id, { text: '  Hardly.\r\nReally.  ' }, 77), hers);
-    assert.deepEqual([hers.text, hers.ko, hers.edited], ['Hardly.\nReally.', undefined, 77]);
+    assert.deepEqual([hers.text, hers.extra, hers.edited], ['Hardly.\nReally.', was.extra, 77]);
     assert.deepEqual([hers.id, hers.n, hers.at, hers.from, hers.reacts.length], [was.id, was.n, was.at, was.from, 1]);
-    // 한국어만 · 원문과 한국어를 같이
-    assert.equal(E.editMessage(m, a.id, hers.id, { ko: ' 겨우요. ' }, 78).ko, '겨우요.'); assert.equal(hers.text, 'Hardly.\nReally.');
-    E.editMessage(m, a.id, hers.id, { text: 'Barely.', ko: '간신히.' }, 79);
-    assert.deepEqual([hers.text, hers.ko, hers.edited], ['Barely.', '간신히.', 79]);
-    // 한국어를 비우거나 원문과 같게 하면 한국어 칸이 없어져요
-    E.editMessage(m, a.id, hers.id, { ko: 'Barely.' }); assert.equal(hers.ko, undefined);
-    E.editMessage(m, a.id, hers.id, { ko: '겨우' }); E.editMessage(m, a.id, hers.id, { ko: '' }); assert.equal(hers.ko, undefined);
+    // (한국어를 고치는 길은 없어요: ko를 줘도 아무것도 안 바뀌어요)
+    assert.equal(E.editMessage(m, a.id, hers.id, { ko: '겨우요.' }, 78), null); assert.equal(hers.ko, undefined); assert.equal(hers.edited, 77);
     // 내 말도 고쳐요; 바뀐 게 없으면 null (고친 때도 안 바뀌어요)
     assert.equal(E.editMessage(m, a.id, mine.id, { text: 'You up?' }, 80).text, 'You up?');
     assert.equal(E.editMessage(m, a.id, mine.id, { text: 'You up?' }, 81), null); assert.equal(E.editMessage(m, a.id, mine.id, {}, 82), null); assert.equal(mine.edited, 80);
@@ -174,13 +169,14 @@ test('보이는 답장 지우기 · 새 답장을 못 받았을 때: 앞의 답�
 test('받아 둔 답장 목록 · 골라 지우기 · 지금 것만 남기기', () => {
     const { m, w, a, say } = world(), first = a.messages.slice(3), head = a.messages.slice(0, 3);
     // 받아 둔 게 없어도 지금 답장 하나가 목록이에요; 글 없는 말(폰으로 한 일)은 말풍선에 없어요
-    assert.deepEqual(E.swipeList(m, a.id), [{ no: 1, now: true, bubbles: [{ text: 'Did you eat', ko: '밥 먹었어' }, { text: 'Answer me', ko: '대답해' }] }]);
+    // (번역: 저장된 것, 번역 단추로 숨긴 것은 '' — 마리나라 seedFromMessages의 규칙)
+    assert.deepEqual(E.swipeList(m, a.id), [{ no: 1, now: true, bubbles: [{ text: 'Did you eat', translation: '밥 먹었어' }, { text: 'Answer me', translation: '' }] }]);
     E.swipeTo(m, a.id, 1); const second = [say(a, 'Mara', 'two', 6000)];
-    E.swipeTo(m, a.id, 1); const third = [say(a, 'Mara', 'three', 7000, { ko: '셋' })];
+    E.swipeTo(m, a.id, 1); const third = [say(a, 'Mara', 'three', 7000, { extra: { translation: '셋', translationSource: 'three' } })];
     E.swipeTo(m, a.id, 1); const fourth = [say(a, 'Mara', 'four', 8000)];
     E.swipeTo(m, a.id, -1);
     const was = JSON.stringify(a);
-    assert.deepEqual(E.swipeList(m, a.id).map(v => [v.no, v.now, v.bubbles.map(b => b.text).join('|'), v.bubbles[0].ko]), [[1, false, 'Did you eat|Answer me', '밥 먹었어'], [2, false, 'two', ''], [3, true, 'three', '셋'], [4, false, 'four', '']]);
+    assert.deepEqual(E.swipeList(m, a.id).map(v => [v.no, v.now, v.bubbles.map(b => b.text).join('|'), v.bubbles[0].translation]), [[1, false, 'Did you eat|Answer me', '밥 먹었어'], [2, false, 'two', ''], [3, true, 'three', '셋'], [4, false, 'four', '']]);
     assert.equal(E.swipeList(m, a.id).find(v => v.now).no, E.swipeInfo(m, a.id).at);
     assert.equal(JSON.stringify(a), was);
     // 보이지 않는 것만 골라 지우기: 보이는 답장은 그대로, 번호가 당겨져요. 없는 번호는 건너뛰어요
@@ -224,70 +220,9 @@ test('받아 둔 답장 목록 · 골라 지우기 · 지금 것만 남기기', 
     assert.deepEqual(E.swipeList(m, 'nope'), []);
 });
 
-test('한국어를 다시 받을 말: 고른 것 중 글이 있는 말만, 방의 순서대로; 누구의 말투 표를 쓸지', () => {
-    const { m, w, a, g, say } = world(), ids = a.messages.map(x => x.id).reverse();
-    a.messages.push({ id: 'call', n: L.liveNo(w), from: 'Mara', at: 5000, call: { min: 3 } });
-    const got = E.koRows(m, a.id, [...ids, 'call', 'none']);
-    assert.equal(got.owner, 'Mara'); assert.equal(got.left, 0);
-    assert.deepEqual(got.rows.map(r => [r.who, r.to, r.x.text]), [['Ren', 'Mara', 'Are you up?'], ['Mara', 'Ren', 'Barely.'], ['Ren', 'Mara', 'Dinner?'], ['Mara', 'Ren', 'Did you eat'], ['Mara', 'Ren', 'Answer me']]);
-    assert.equal(got.rows[1].x, a.messages[1]);
-    // 단체방: 받는 사람은 나머지 모두. 폰 있는 캐릭터가 없으면 첫 캐릭터
-    const x = say(g, 'Ivo', 'hey all', 100);
-    assert.deepEqual(E.koRows(m, g.id, x.id).rows.map(r => [r.who, r.to]), [['Ivo', 'Ren, Mara']]);
-    assert.equal(E.koRows(m, g.id, x.id).owner, 'Mara');
-    delete w.phones.mara;
-    assert.equal(E.koRows(m, g.id, x.id).owner, 'Mara'); assert.equal(E.koRows(m, a.id, []).rows.length, 0);
-    // 한 번에 정한 수까지만: 남은 수를 알려 줘요
-    const keep = E.EDIT.max; E.EDIT.max = 2;
-    try { const part = E.koRows(m, a.id, ids); assert.deepEqual([part.rows.length, part.left], [2, 3]); } finally { E.EDIT.max = keep; }
-});
-
-test('번역 요청 글: 번역 지시문이 받는 칸 이름 그대로; 요청 하나에 정한 만큼씩 나눠요', async () => {
-    const { m, a } = world(), { rows } = E.koRows(m, a.id, a.messages.map(x => x.id));
-    const input = E.koInput(rows.slice(1, 3), { owner: 'Mara', around: '[PEOPLE AROUND]\n- Ren: a friend', voices: [{ who: 'Mara', style: '반말, 짧게' }], gloss: [{ src: 'Dinner', ko: '저녁' }] });
-    assert.equal(input, `[OWNER]
-Mara
-
-[PEOPLE AROUND]
-- Ren: a friend
-
-[VOICES]
-- Mara: 반말, 짧게
-
-[GLOSSARY]
-- Dinner = 저녁
-
-[LINES]
-1: [text · Mara → Ren] "Barely."
-2: [text · Ren → Mara] "Dinner?"`);
-    assert.equal(E.koInput(rows.slice(0, 1)), '[OWNER]\nme\n\n[LINES]\n1: [text · Ren → Mara] "Are you up?"');
-    // (보내는 칸은 모두 폰 1 번역 지시문의 YOU GET에 있어요)
-    const tr = await readFile(new URL('phonetr.js', SRC), 'utf8'), sys = tr.slice(tr.indexOf('export const AI_SYS_PHONE_KO'), tr.indexOf('export const AI_SYS_PHONE_VOICE')), get = sys.slice(sys.indexOf('YOU GET'), sys.indexOf('\nVOICE\n'));
-    for (const b of [...input.matchAll(/^\[([A-Z' ]+)\]$/gm)].map(x => x[1])) assert.ok(get.includes(`- ${b}`), b);
-    assert.ok(sys.includes('"[app · who → to]"') && sys.includes('{ "lines": [{ "n": its number, "ko": the Korean }] }'));
-    const keep = { ...E.EDIT }; Object.assign(E.EDIT, { lines: 2, chars: 9000 });
-    try { assert.deepEqual(E.koChunks(rows).map(c => [c.rows.length, c.size]), [[2, 18], [2, 18], [1, 9]]); } finally { Object.assign(E.EDIT, keep); }
-    Object.assign(E.EDIT, { lines: 60, chars: 12 });
-    try { assert.deepEqual(E.koChunks(rows).map(c => c.rows.map(r => r.x.text)), [['Are you up?'], ['Barely.'], ['Dinner?'], ['Did you eat'], ['Answer me']]); } finally { Object.assign(E.EDIT, keep); }
-    assert.deepEqual(E.koChunks([]), []);
-});
-
-test('답 넣기: 번호대로 그 말의 한국어만 바꿔요. 답에 없는 줄 · 빈 답은 그대로, 원문과 같으면 한국어 칸을 비워요', () => {
-    const { m, a } = world(), { rows } = E.koRows(m, a.id, a.messages.map(x => x.id)), was = a.messages.map(x => ({ ...x }));
-    const n = E.takeKo(rows, { lines: [{ n: 2, ko: ' 간신히. ' }, { n: 4, ko: '' }, { n: 5, ko: 'Answer me' }, { n: 9, ko: '없는 줄' }, { n: 2, ko: '두 번째 답' }, { n: 1, ko: '일어났어?' }] });
-    assert.equal(n, 3);
-    assert.deepEqual(a.messages.map(x => x.ko), ['일어났어?', '간신히.', undefined, '밥 먹었어', undefined, undefined]);
-    // (한국어 말고는 아무것도 안 바뀌어요)
-    assert.deepEqual(a.messages.map(({ ko, ...x }) => x), was.map(({ ko, ...x }) => x));
-    for (const bad of [null, {}, { lines: 'x' }, { lines: [null, { n: 'a', ko: 'x' }] }]) assert.equal(E.takeKo(rows, bad), 0);
-    // 원문에 없는 마침표 · 쉼표는 번역에서 떼요 (원문에 있으면 그대로)
-    E.takeKo(rows, { lines: [{ n: 4, ko: '밥은, 먹었어.' }, { n: 2, ko: '겨우, 일어났어.' }] });
-    assert.deepEqual([a.messages[3].ko, a.messages[1].ko], ['밥은 먹었어', '겨우 일어났어.']);
-});
-
 test('이 파일은 폰 2 저장 자리만 불러요; 모델 · 저장은 안 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const src = await readFile(new URL('phone2edit.js', SRC), 'utf8');
-    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2room.js', './phone2store.js', './phone2react.js', './phone2reply.js']);
-    assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|askTranslator|boundary/);
+    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2room.js', './phone2store.js', './phone2react.js']);
+    assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|askTranslator|boundary|\bko\b/);
     for (const f of (await readdir(SRC)).filter(f => f.endsWith('.js') && !/^phone2/.test(f) && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(f, SRC), 'utf8'), /phone2edit/, f);
 });

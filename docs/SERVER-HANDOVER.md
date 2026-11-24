@@ -206,6 +206,16 @@ kit = { v: 1, ver (확장 버전),
 - `into`: `m.live`를 **제자리로** 맞춰요. 방 · 말의 객체가 그대로라 화면과 돌고 있는 답장이 쥔 것이 안 죽어요. `m.live = 새것`으로 바꾸면 안 돼요.
 - 퍼즈 400판이 지키는 것: 어느 쪽 말도 안 없어짐, id · 번호 안 겹침, 때 순서, 서버 번호 그대로, 답장 줄 그대로.
 
+### 3-6b. 답장 뒤의 자동 번역 (2026-11-23, 마리나라의 번역 기능)
+마리나라는 답을 저장한 뒤 서버가 번역해요(`generate.routes.ts dispatchAutomaticTranslations`: 생성 자물쇠를 쥐지 않고, 저장된 답의 말을 차례로, 실패는 경고 줄만).
+우리도 일꾼이 해요(`work.mjs translateAfter` → `phone2go.js liveGo`의 `translate` 자리). 플러그인이 없으면 브라우저가 같은 일을 해요(`phone2translate.js browserAutoTranslate`).
+
+- 표시: 답이 방에 들어갈 때 그 말풍선마다 `extra.automaticTranslationSource`(그 글)를 **답과 같은 저장에** 남겨요(`liveGo`의 `took` → `markAutomaticTranslation`). 이 채팅의 `autoTranslate`가 켜져 있을 때만.
+- 번역: 답의 일이 끝난 뒤(`after`), 방 자물쇠를 놓은 채로. 말 하나마다 `app.open` → `withWorld` 안에서 `translateGenerated`(번역 연결이 실리 프로필 · 실리 연결 방식일 수 있어서 실리의 것을 끼운 자리여야 해요) → `app.write`. 저장이 브라우저와 부딪히면(409) 다시 읽고 **받은 번역을 그대로** 넣어요(두 번까지, 번역은 다시 묻지 않아요). 그사이 글을 고쳤거나 번역을 숨겼으면 안 넣어요.
+- `translating`: 방마다 도는 수(`phone2translate.js dispatchAutomaticTranslations`의 `pending`). `/auto/status`의 방 줄마다 `translating`. 번역이 도는 동안 `/auto/status`는 일꾼의 줄을 기다리지 않고 바로 답해요(can · why는 마지막에 본 것). 길(`index.mjs`)과 본체(`host.mjs`)는 안 바뀌었어요: 확장 업데이트만으로 돼요.
+- 브라우저: 서버가 쓴 답에 번역 표시가 있고 번역이 아직 없으면, 'na-live-reply'를 보내기 전에 `/auto/status`의 translating이 꺼질 때까지 1.5초마다 물어요(최대 30분, 실패해도 계속) → `keepSync` → 신호(`phone2keepon.js waitForServerTranslationToSettle`: 마리나라 `use-generate.ts` 1126~1141). 확인: `tests/phone2wake.test.mjs` 마지막 · `tests/pluginwork.test.mjs` 마지막.
+- 실패 줄: `[translate] 메시지 %s의 자동 번역에 실패했습니다` (마리나라 "[translate] Automatic translation failed for message %s").
+
 ### 3-7. 따라 묻기 수를 되살려요 (우리 것)
 마리나라는 서버 한 곳이 "몇 번째 따라 묻기인지"를 메모리에 기억해요. 우리는 브라우저와 일꾼이 **따로** 기억해요.
 그래서 먼저 건 말의 마지막 말풍선에 `extra.autonomous = true`를 남기고, 방을 처음 판단할 때(`restoreFollowups`) ·

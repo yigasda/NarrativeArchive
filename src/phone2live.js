@@ -100,7 +100,6 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
         recent: [...recs, ...did], today,
         situations: (Array.isArray(p.situations) ? p.situations : []).filter(s => one(s?.what) && (one(s.state) !== 'done' || one(s.open))).map(s => ({ title: one(s.id) || one(s.what).slice(0, 40), what: s.what, state: s.state, known: s.known, open: s.open })),
         card: deps.card?.(p.owner) || '', who: deps.who?.(p.owner) || '',
-        voices: (Array.isArray(p.koVoice) ? p.koVoice : []).map(v => ({ who: v?.who ?? v?.from, style: v?.style })),
         around: deps.around?.(p) || '', blind: deps.blind?.(p.owner) || '',
         // (the newest of the story: whole sections from the end, as many as fit)
         story: story.length <= LIVE_ASK.story ? story : (cut => cut.slice(Math.max(0, cut.search(/^## /m))))(story.slice(-LIVE_ASK.story)),

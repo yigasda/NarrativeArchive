@@ -60,6 +60,10 @@ export const liveChatTail=()=>T.tail||{lines:[],first:null,end:0};
 export const liveSnapBehind=(snap,t)=>!!snap&&t.end>snap.upto&&(t.first===null||t.first>snap.upto+1);
 export const liveSnapNow=async m=>{T.starts=(T.starts||0)+1;const a=T.start;if(a instanceof Error)throw a;return typeof a==='function'?a(m):a||null;};
 export const liveSnapExtend=async(m,snap)=>{T.extends=(T.extends||0)+1;T.extendArgs=[m,snap];const a=T.extend;if(a instanceof Error)throw a;return typeof a==='function'?a(m,snap):a;};`);
+// (Marinara's translation, ported, and our glue for it: phone2translate.js with the same stand-ins)
+for (const f of ['translation.service.js', 'translator-defaults.js', 'translation-prompt.js', 'translation.store.js', 'use-translate.js', 'translate-text.js', 'draft-translation.js', 'use-translator-defaults.js', 'quote-format.js']) map[`./marinara/${f}`] = href(`marinara/${f}`);
+map['./phone2translate.js'] = encoded(swap(await readFile(new URL('../src/phone2translate.js', import.meta.url), 'utf8')));
+export const TRL = await import(map['./phone2translate.js']);
 export const G = await import(encoded(swap(await readFile(new URL('../src/phone2go.js', import.meta.url), 'utf8'))));
 const store = new Map();
 globalThis.localStorage ||= { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) };

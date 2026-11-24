@@ -2,7 +2,7 @@
 // 입력 모으기 · 저장은 부르는 쪽이 넘겨요(여기선 폰 2 저장 자리만 다뤄요). 폰 1은 이 파일을 안 불러요.
 
 import { liveKey, liveWorld, liveNo, readLive, nextJob, finishJob, reviveJobs } from './phone2store.js';
-import { PHONE2_APPS, phone2Ko, koLike } from './phone2reply.js';
+import { PHONE2_APPS } from './phone2reply.js';
 import { replyReact, putReact } from './phone2react.js';
 import { parseGroupedSpeakerSegments, splitGroupedSegmentDisplayLines, stripLeadingMessageTimestamps } from './marinara/speaker-segments.js';
 import { normalizeTextForMatch } from './marinara/text-matching.js';
@@ -24,11 +24,11 @@ export const stateRest = s => one(s).replace(/^\d{1,2}:\d{2}\s*[·•|,-]\s*/, '
 // the app a "does" line names, as the prompt lists it (the list's own spelling); another name is kept as written
 const appOf = a => PHONE2_APPS.find(x => x.toLowerCase() === one(a).toLowerCase()) || PHONE2_APPS.find(x => x.toLowerCase().split(/[,&]/).map(y => y.trim()).includes(one(a).toLowerCase())) || one(a).slice(0, 30);
 
-// 7-2. the model's answer into the room: each bubble a message of the owner's (its number, the real moment, its Korean,
-// the owner's state), what they did on the phone on the last one. No bubble but something done or a new state: one
+// 7-2. the model's answer into the room: each bubble a message of the owner's (its number, the real moment, the owner's
+// state), what they did on the phone on the last one. No bubble but something done or a new state: one
 // message with no words (act: true; the messenger doesn't draw it, the reflection reads its lines). A bubble the owner
 // already said among their newest ones is not said again. "react": an emoji on someone's last text (phone2react.js). The
-// owner has read the room. Returns { said, does, state, react }.
+// owner has read the room. Returns { said, does, state, react, ids (the messages put in, in order) }.
 // Throws when the answer can't be read (nothing is put in).
 export function takeReply(m, owner, roomId, answer, opts = {}) {
     const { now = Date.now(), parse = null } = opts;
@@ -38,15 +38,15 @@ export function takeReply(m, owner, roomId, answer, opts = {}) {
     if (o.reply !== undefined && !Array.isArray(o.reply)) throw new Error('답장을 읽을 수 없습니다: reply가 목록이 아닙니다.');
     const name = room.members.find(n => same(n, owner));
     const had = new Set((room.messages || []).filter(x => same(x.from, name)).slice(-12).map(x => one(x.text)));
-    const raw = (o.reply || []).map(x => (typeof x === 'string' ? x.trim() : '')).slice(0, REPLY_MAX.bubbles), ko = phone2Ko(raw, o.ko);
-    const bubbles = raw.map((text, i) => ({ text: text.slice(0, REPLY_MAX.chars), ko: one(ko[i]) === one(text) ? '' : koLike(text, String(ko[i] ?? '').trim()).slice(0, REPLY_MAX.chars) })).filter(b => one(b.text) && !had.has(one(b.text)));
+    const raw = (o.reply || []).map(x => (typeof x === 'string' ? x.trim() : '')).slice(0, REPLY_MAX.bubbles);
+    const bubbles = raw.map(text => ({ text: text.slice(0, REPLY_MAX.chars) })).filter(b => one(b.text) && !had.has(one(b.text)));
     const does = (Array.isArray(o.does) ? o.does : []).map(d => ({ app: appOf(d?.app), what: one(d?.what).slice(0, REPLY_MAX.what) })).filter(d => d.app && d.what).slice(0, REPLY_MAX.does);
     // (an owner with a schedule: the state is the schedule's, given by the caller; the answer has none)
     const given = typeof opts.state === 'string', state = given ? one(opts.state) : stateRest(o.state);
     // (an emoji on someone's last text: on the room as it was before this answer)
     const react = o.react === undefined || o.react === null || o.react === '' ? null : replyReact(o.react, { owner: name, persona: w.persona, members: room.members, messages: room.messages });
     const out = [], msg = (text, extra, k) => ({ id: `t${now.toString(36)}${k}${Math.random().toString(36).slice(2, 6)}`, n: liveNo(w), from: name, text, at: now + k, ...(state ? { state } : {}), ...extra });
-    bubbles.forEach((b, k) => out.push(msg(b.text, b.ko ? { ko: b.ko } : {}, k)));
+    bubbles.forEach((b, k) => out.push(msg(b.text, {}, k)));
     // (an answer of an emoji alone, with nothing done on the phone, leaves no message: it is no answer to swipe or throw away)
     if (!out.length && (does.length || (state && !given && !react))) out.push(msg('', { act: true }, 0));
     if (does.length && out.length) out[out.length - 1].does = does;
@@ -54,14 +54,15 @@ export function takeReply(m, owner, roomId, answer, opts = {}) {
     // (one with words: the reaction goes with them, out and back when the answer is swiped; one alone stays)
     if (react) putReact(react.on, name, react.e, { at: now, via: out.map(x => x.id) });
     readLive(m, roomId, name, now + out.length);
-    return { said: bubbles.length, does: does.length, state, react: react?.e || '', ...(o.status && typeof o.status === 'object' && !Array.isArray(o.status) ? { status: o.status } : {}) };
+    // (ids: the messages this answer put in, in order — the reply's parts, for its automatic translation: phone2translate.js)
+    return { said: bubbles.length, does: does.length, state, react: react?.e || '', ids: out.map(x => x.id), ...(o.status && typeof o.status === 'object' && !Array.isArray(o.status) ? { status: o.status } : {}) };
 }
 
 // A Merged group answer (Marinara's merged Conversation reply: several characters' turns in one text, as "Name: text"
 // lines or <speaker="Name"> tags) into the room: split by speaker with Marinara's parser, each line a message of that
 // speaker's. A part with no known speaker is the lead's (in Marinara the merged message belongs to its first character).
 //   names: the room's characters; lead: the one the turn is filed under; stateOf(name) → that speaker's state now ('' none)
-// Returns { said, speakers: [name] }. Throws when the answer is empty.
+// Returns { said, speakers: [name], ids }. Throws when the answer is empty.
 export function takeMerged(m, roomId, answer, { names = [], lead = '', now = Date.now(), stateOf = () => '' } = {}) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
     if (!w || !room) throw new Error('답장을 넣을 채팅방이 없습니다.');
@@ -81,7 +82,7 @@ export function takeMerged(m, roomId, answer, { names = [], lead = '', now = Dat
     if (!out.length) throw new Error('답장을 읽을 수 없습니다: 빈 응답입니다.');
     room.messages.push(...out);
     for (const name of speakers) readLive(m, roomId, name, now + out.length);
-    return { said: out.length, speakers, does: 0, state: '', react: '' };
+    return { said: out.length, speakers, does: 0, state: '', react: '', ids: out.map(x => x.id) };
 }
 
 // 7-3. the line: one job at a time, in order, until none waits. A reply job: gather the request (gather(job) → { system,

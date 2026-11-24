@@ -15,7 +15,8 @@
 //     finance, profiles, pre, lore, loreOff:      폰 1의 m.finance · phoneProfiles · phonePre · phoneLore · phoneLoreOff
 //                                                 에 해당하는 폰 2 것 (이야기에서 시작하면 그때의 깊은 복사)
 //     messenger: { accounts: { [name key]: { name } }, rooms: { [id]: { id, members: [name], messages: [], name?, read? } } },
-//       messages: [{ id, n (세계 전체의 메시지 번호), from: name, text, at (ms), ko?, state? (주인이 답하며 적은 상태), does? [{ app, what }] (답하며 폰으로 한 일),
+//       messages: [{ id, n (세계 전체의 메시지 번호), from: name, text, at (ms), state? (주인이 답하며 적은 상태), does? [{ app, what }] (답하며 폰으로 한 일),
+//         extra? (마리나라의 메시지 extra: 번역은 translation · translationSource · translationHidden · automaticTranslationSource — phone2translate.js),
 //         act? (말 없이 한 일 · 상태만: 메신저 화면엔 안 그려요), call? }], read: { [name key]: 마지막으로 읽은 시각 (ms) }, name: 단체방 이름
 //       seq: 마지막으로 준 메시지 번호
 //     queue: { round, jobs: [{ id, world, round, kind, owner, at, state: 'waiting' | 'running' | 'done' | 'failed' | 'dropped', error, seen }] },
@@ -62,8 +63,12 @@ export function newWorld(m, { from = 'fresh', persona = '', dayShift = 0, scope 
     live.world = { id: newId('w'), from, startedAt: now, dayShift: Number(dayShift) || 0, scope: String(scope || ''), storyUpto: from === 'story' ? storyUpto : null,
         persona: name, lastOwner: '', phones: {}, finance: null, profiles: {}, pre: {}, lore: [], loreOff: {},
         messenger: { accounts: { [liveKey(name)]: { name } }, rooms: {} }, queue: { round: 0, jobs: [] } };
+    for (const fn of worldSeeds) fn(live.world);
     return live.world;
 }
+// 새 폰 2가 생길 때 (마리나라의 새 채팅): 부르는 쪽이 채워 넣을 것 (phone2translate.js: 번역 기본값). 이 파일은 아무것도 안 불러요
+const worldSeeds = [];
+export const setWorldSeed = fn => { if (typeof fn === 'function' && !worldSeeds.includes(fn)) worldSeeds.push(fn); };
 // 폰 1's chat-level keys a 폰 2 begun from the story takes a deep copy of (phoneScreenHolder, phoneStoryScope and
 // phoneStoryRun are 폰 1's alone; glossary, dateOrder and the settings stay shared, read only)
 export const STORY_COPY = { phones: 'phones', finance: 'finance', phoneProfiles: 'profiles', phonePre: 'pre', phoneLore: 'lore', phoneLoreOff: 'loreOff' };

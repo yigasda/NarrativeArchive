@@ -915,3 +915,44 @@ test('일꾼 · 실리 서버의 코드를 옮긴 것(사용자 폴더 읽기)�
     for (const x of S.asked) assert.match(textOf(x.body), new RegExp(`\\[PERSONA — ${personas[server]}\\]`));
     assert.equal(S.asked.length, 2);
 });
+
+test('일꾼 · 자동 번역 (마리나라: 답이 저장된 뒤 서버가, 생성 자물쇠 없이): 늦은 답장의 말풍선을 답과 같은 저장에 표시하고, 뒤에 차례로 번역해 저장해요. 그동안 /auto/status의 translating', async t => {
+    let open;
+    const gate = new Promise(r => { open = r; }), order = [];
+    const S = await stage(t, { reply: async body => {
+        const sys = String(body.messages[0]?.content || '');
+        if (sys.startsWith('You are a translator')) { const text = body.messages[1].content.split('\n\n').slice(1).join('\n\n'); order.push(text); await gate; return `  번역: ${text}  `; }
+        return { reply: ['sorry', 'was busy'], status: '' };
+    } });
+    const a = world({ hoursAgo: 0.2 });
+    a.w.presence.meta = { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
+    const j = enqueueJob(a.m, { kind: 'reply', owner: 'Mara', room: a.room.id, at: Date.now() - 600_000 });
+    Object.assign(j, { timed: true, notBefore: Date.now() - 1000 });
+    await S.put('sa', a.m);
+    assert.equal(await S.auto.sweep(), 1);
+    let w = await S.get('sa');
+    const ids = w.messenger.rooms[a.room.id].messages.slice(-2).map(x => x.id);
+    assert.deepEqual(w.messenger.rooms[a.room.id].messages.slice(-2).map(x => [x.text, x.extra?.automaticTranslationSource, x.extra?.translation]), [['sorry', 'sorry', undefined], ['was busy', 'was busy', undefined]]);
+    // (the translation does not hold the room: the browser may take it meanwhile)
+    assert.deepEqual(await S.auto.claim('sa', a.room.id, 'browser:tab1'), { ok: true });
+    await S.auto.release('sa', a.room.id, 'browser:tab1');
+    assert.deepEqual((await S.auto.status('sa')).map(x => x.translating), [true]);
+    // (the browser saves while the server translates: the server's save meets it — 409 —, reads again and puts the translation it got)
+    const got = await S.store.load('sa'), live = joinLive(got.parts);
+    liveWorld({ live }).messenger.rooms[a.room.id].name = 'Bakery';
+    await S.store.save('sa', { base: got.rev, parts: JSON.parse(JSON.stringify(splitLive(live))) });
+    open();
+    let rows;
+    for (let i = 0; i < 200; i++) { rows = await S.auto.status('sa'); if (!rows[0].translating) break; await new Promise(r => setTimeout(r, 20)); }
+    assert.deepEqual(rows.map(x => [x.can, x.translating]), [[true, false]]);
+    assert.deepEqual(order, ['sorry', 'was busy']);
+    w = await S.get('sa');
+    const [x, y] = ids.map(id => w.messenger.rooms[a.room.id].messages.find(m => m.id === id));
+    assert.deepEqual(x.extra, { automaticTranslationSource: 'sorry', translation: '번역: sorry', translationSource: 'sorry', translationHidden: false });
+    assert.equal(y.extra.translation, '번역: was busy');
+    assert.equal(w.messenger.rooms[a.room.id].name, 'Bakery');
+    // (the translation request: Marinara's prompt into the chosen language, temperature 0.3, the system message kept as one)
+    const tr = S.asked.filter(q => String(q.body.messages[0].content).startsWith('You are a translator'));
+    assert.equal(tr.length, 2, 'a translation is not asked again after a save conflict');
+    assert.deepEqual([tr[0].body.temperature, tr[0].body.max_tokens, tr[0].body.messages.map(m => m.role), tr[0].body.messages[1].content], [0.3, 4096, ['system', 'user'], 'Translate the following text to Korean:\n\nsorry']);
+});

@@ -132,8 +132,10 @@ test('방에 넣기: 채팅 순서 · 원래 시간 · 번역까지, 전한 것�
     const room = w.messenger.rooms[out.room];
     assert.deepEqual([out.count, out.messages, out.from, out.to], [6, 4, 0, 3]);
     assert.deepEqual(room.members, ['Ren', 'Mara']);
-    assert.deepEqual(room.messages.map(x => [x.from, x.text, x.ko || '']), [['Ren', 'Mara', ''], ['Mara', 'Yes?', '응?'], ['Ren', 'What are you doing', ''],
+    // (the add-on's Korean is the message's translation, where Marinara keeps one: extra.translation with the words it translates)
+    assert.deepEqual(room.messages.map(x => [x.from, x.text, x.extra?.translation || '']), [['Ren', 'Mara', ''], ['Mara', 'Yes?', '응?'], ['Ren', 'What are you doing', ''],
         ['Mara', 'I am at the office', '나 사무실이야.'], ['Mara', 'And I am not & never was late', '그리고 난 늦은 적 없어.'], ['Mara', 'Did you just wake up', '방금 일어났어?']]);
+    assert.ok(room.messages.every(x => x.ko === undefined && (!x.extra || (x.extra.translationSource === x.text && Object.keys(x.extra).length === 2))));
     assert.ok(room.messages.every((x, k) => x.told === 777 && Number.isInteger(x.n) && (k === 0 || (x.n === room.messages[k - 1].n + 1 && x.at >= room.messages[k - 1].at))));
     assert.equal(new Date(room.messages[3].at).toISOString(), '2026-11-20T07:29:06.350Z');
     assert.equal(room.messages[5].at - room.messages[3].at, 2);

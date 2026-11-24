@@ -53,6 +53,9 @@
 | 위에 딸린 generate.routes.ts 줄: 1505~1544(생성 자물쇠) · 1915~1954(연결이 끊겨도 계속) · 4325~4384(늦음 기다리기 부르는 곳) | 아니오 (그 줄만. 파일 전체 16262줄은 아니오) |
 | 나머지 "아직" 파일 전부 | 아니오 |
 
+| 번역 (2026-11-23, staging cfc726e93): server/services/translation.service.ts(363줄) · routes/translate.routes.ts(7줄) · shared/utils/translator-defaults.ts(95줄) · client/stores/translation.store.ts(99줄) · hooks/use-translate.ts(172줄) · lib/translate-text.ts(20줄) · lib/draft-translation.ts(20줄) · hooks/use-translator-defaults.ts(38줄) · features/chat-settings/sections/TranslationSection.tsx(429줄) · server/routes/generate/save-generated-reply.ts(187줄) · shared/utils/quote-format.ts(86줄) · server/middleware/error-handler.ts(71줄) | 예 (열두 파일 모두 처음부터 끝까지) |
+| 번역에 딸린 줄 (그 줄들만): shared/constants/defaults.ts(51~58) · generate.routes.ts(1325~1340 · 1960~2040 · 11440~11480 · 11780~11900 · 12200~12300 · 12580~12720 · 16220~16290 · 16330~16360) · use-generate.ts(1080~1150 · 1375~1395 · 2535~2575 · 3640~3730 · 3820~3930) · chats.storage.ts(1630~1665 · 2801~2841 · 2975~3075) · chats.routes.ts(3230~3330) · app-settings.routes.ts(95~110 · 225~275) · chat-presets.storage.ts(410~475) · chat-setup-draft.ts(1~70) · chat-preset.ts(380~440) · chat-macros.ts(478~527) · ConversationInput.tsx(1005~1030 · 1130~1160 · 1855~1890 · 1935~1968 · 2345~2368) · ConversationMessage.tsx(217~221 · 440~500 · 655~705 · 791~805 · 960~995 · 1275~1300) · ConversationMessageShared.tsx(145~165 · 640~672) · ConversationMessageActions.tsx(150~162) · ConversationMessageBubble.tsx(320~332) · ConversationMessageGrouped.tsx(118~128 · 412~460) · ConversationMessageLine.tsx(240~256) · ChatArea.tsx(2105~2150) · ConversationView.tsx(1444 · 1471 · 1503) · openai.provider.ts(2470~2640: 번역 요청 몸통 비교) · connection-fallback-provider.ts(1~200) · security.ts(safeFetch의 maxResponseBytes 오류 글) · en.json의 번역 글 | 예 (그 줄들만. 파일 전체는 아니오: generate.routes.ts 16408줄 · use-generate.ts 4694줄 · chats.storage.ts · ConversationInput.tsx · ChatArea.tsx 4627줄 · openai.provider.ts · connection-fallback-provider.ts 499줄 중 200줄) |
+
 ## 서버 · 늦은 답장: 마리나라와 다른 것 (2026-11-23, 대 본 결과)
 
 가져온 파일 두 개는 마리나라와 같아요(타입을 지우고 대 봄: `plugin/marinara/server-autonomous-scheduler.service.js`는 `app.chats` 한 줄 · 안드로이드 머리 한 줄, `src/marinara/autonomous.service.js`는 다른 줄 없음). 다른 것은 우리가 새로 짠 곳에 있어요.
@@ -89,7 +92,7 @@
 | client/lib/notification-sound.ts | 106 | 다 (코드). 부르는 곳은 화면(디자인 세션) | src/marinara/notification-sound.js | 알림 소리(합성음 · 내 소리 파일 · 창이 앞에 있을 때는 안 울리기) |
 | server/routes/notification-sound.routes.ts | 212 | 다 (2026-11-23, 끝까지 읽음) | plugin/sound.mjs · plugin/index.mjs `/sound*` | 형식 알아보기 · 10MB · 확장자 · 한 줄 세우기 · 가장 새 파일 · 파일 주기 머리 그대로. **다른 것**: 둘 곳은 실리 사용자 폴더, 올리기는 실리의 multer(`avatar` 칸) 임시 파일, 지우기는 `POST /sound/delete`(마리나라 `DELETE /`, 204), 오류 글은 한국어(뜻은 그대로). 백업에는 안 들어가요(마리나라는 `backup.routes.ts` 122줄에서 넣어요: 우리 백업은 채팅마다의 아카이브라 이 파일이 들어갈 자리가 없음) |
 | client/hooks/use-custom-notification-sound.ts | 46 | 다 (2026-11-23, 끝까지 읽음) | src/phone2sound.js | 상태 · 올리기 · 지우기와 `setCustomNotificationSoundUrl`(App.tsx 545 · 573~575 · SettingControls.tsx 380~420) 그대로. react-query의 30초 기억 대신 부를 때마다 물어요 |
-| client/hooks/use-generate.ts (알림 부분) | 4694 | 끝까지 읽음 (2026-11-23). 알림 줄만 가져옴 | phone2go.js `replied` · phone2keepon.js `synced` → `na-live-reply` | `completedReply`(3840~3846) · 안 보는 방의 안 읽음 · 방울 · 알림음(2535~2565 · 3670~3720) · `replyNotificationTitle`(487) · 알림 토글(3866~3879)의 때를 신호로 줘요. 띄우는 것은 화면. 번역을 기다렸다가 알리기(`waitForServerTranslationToSettle`)는 우리 번역이 답에 같이 와서 없음. 나머지(스트리밍 · 에이전트 · 게임 등)는 이 기능이 아니라 안 가져옴 |
+| client/hooks/use-generate.ts (알림 부분) | 4694 | 끝까지 읽음 (2026-11-23). 알림 줄만 가져옴 | phone2go.js `replied` · phone2keepon.js `synced` → `na-live-reply` | `completedReply`(3840~3846) · 안 보는 방의 안 읽음 · 방울 · 알림음(2535~2565 · 3670~3720) · `replyNotificationTitle`(487) · 알림 토글(3866~3879)의 때를 신호로 줘요. 띄우는 것은 화면. 번역을 기다렸다가 알리기(`waitForServerTranslationToSettle`)도 해요(2026-11-23, 아래 "번역"). 나머지(스트리밍 · 에이전트 · 게임 등)는 이 기능이 아니라 안 가져옴 |
 | client/lib/local-notifications.ts | 177 | 다 (코드). 부르는 곳은 화면(디자인 세션) | src/marinara/local-notifications.js | 브라우저 알림(권한 묻기 · 띄우기). 알림의 글 · 그림만 실리 것으로(`MESSAGE_NOTIFICATION`). 마리나라 안드로이드 앱의 다리는 우리에게 없어서 늘 "unsupported" |
 | client/components/chat/ConversationAutonomousEffects.tsx | 113 | 일부 | phone2go.js · phone2keepon.js의 `na-live-auto` 신호 | 캐릭터가 먼저 건 말이 들어오면 화면에 신호를 보내요(브라우저가 만든 것 · 서버가 만든 것 둘 다). 소리 · "○○ messaged you" 띠 · 안 읽음 수는 화면 몫(디자인 세션) |
 | client/lib/user-status.ts · user-presence-activity.ts · hooks/use-idle-detection.ts | 110 | 다 | src/marinara/idle-detection.js · phone2sched.js userStore | |
@@ -98,7 +101,7 @@
 | routes/generate/conversation-presence-runtime.ts | 492 | 다 | phone2go.js holdReplies · pickResponders · handOff | 늦음 · 오프라인 · @ 부름 · 늦음이 짧은 사람부터 · 답한 뒤 부른 사람의 늦음(mentionResponderDelays). 장면 · 게임 중인 사람 빼기는 그 기능이 없어서 없음 |
 | services/generation/smart-group-decision.ts | 104 | 일부 | src/marinara/group-responders.js | `smartOrderQuestions` · `chooseSmartResponders`는 그대로. `smartOrderState`와 그걸 부르는 길(Decision 모델로 고르기)은 아직: 마리나라의 Decision 모델(`services/decision/`)이 우리에게 없음. 그래서 smart는 항상 채팅 모델에게 물음(마리나라에서 Decision 모델을 꺼 둔 것과 같음) |
 | routes/generate.routes.ts (단체방에서 누가 답하나) | 그 줄들 | 일부 | src/marinara/group-responders.js · phone2sched.js groupResponders · groupHandoff · phone2go.js pickResponders · handOff | 답하는 순서 3가지(sequential · smart · manual), @으로 부르면 그 사람만, smart 고르기 지시문 그대로(temperature 0.2), 못 고르면 한 사람, 늦음이 짧은 사람부터, 답에서 @이름으로 부른 사람이 다음 차례(한 차례에 한 번, 먼저 건 말이면 하루 상한 안에서), "@Name으로 부를 수 있다" 알림 글 그대로 + 끄기(`groupTurnPromptEnabled`). 말에 답장을 달면 그 사람을 부른 것(`replyTo`), topP 1. **없는 것**: 고르기 전용 연결 · 예비 연결("꼭 할 것"의 연결 일과 같이). 저장된 연결 프로필(실리 Connection Manager)로 보낼 때는 topP가 안 실림 |
-| Merged 단체방 (generate.routes.ts · conversation-prompt.ts · conversation-prompt-formatting.ts · speaker-segments.ts) | | 일부 | src/marinara/merged-conversation.js · speaker-segments.js · phone2go.js mergeTurn · gatherMerged · phone2run.js takeMerged | 마리나라의 기본 단체방 방식. `groupChatMode`가 `individual`이 아니면 Merged(마리나라의 읽기 그대로). 한 요청이 답할 수 있는 사람 모두의 말을 `Name: 말`로 쓰고, 마리나라의 나누기(`parseGroupedSpeakerSegments`)로 사람마다의 말로 넣음. 지시문은 마리나라의 것 그대로(기본 Conversation 지시문 + 단체방 줄 + 되풀이 금지 + 끝에 Output Format, 오프라인이 있으면 "Only … may respond this turn", @으로 부르면 "Respond ONLY as …"). 늦음은 마리나라의 계산(가장 늦는 사람 · 부르면 가장 바쁜 사람의 부름 늦음). 다시 받기는 모두(오프라인도)에게 한 번에. **다른 것**: 입력은 우리 블록(MESSENGER · CHAT SUMMARY · CONTEXT · 카드 · PERSONA · STORY · LAST MESSAGES)이고 마리나라의 프로필 블록이 아님. 한 답을 한 말로 두지 않고 사람마다의 말로 나눠 저장함(우리 저장 모양). 먼저 건 말(자율)은 Merged 방에서도 한 사람이 우리 지시문으로 씀(마리나라는 그것도 Merged 요청). **지금 없는 것(우리 지시문으로 바꿀 때 채울 것)**: 번역(ko) · 폰에서 한 일(does) · 상태 줄 · 반응 · 상태 명령 |
+| Merged 단체방 (generate.routes.ts · conversation-prompt.ts · conversation-prompt-formatting.ts · speaker-segments.ts) | | 일부 | src/marinara/merged-conversation.js · speaker-segments.js · phone2go.js mergeTurn · gatherMerged · phone2run.js takeMerged | 마리나라의 기본 단체방 방식. `groupChatMode`가 `individual`이 아니면 Merged(마리나라의 읽기 그대로). 한 요청이 답할 수 있는 사람 모두의 말을 `Name: 말`로 쓰고, 마리나라의 나누기(`parseGroupedSpeakerSegments`)로 사람마다의 말로 넣음. 지시문은 마리나라의 것 그대로(기본 Conversation 지시문 + 단체방 줄 + 되풀이 금지 + 끝에 Output Format, 오프라인이 있으면 "Only … may respond this turn", @으로 부르면 "Respond ONLY as …"). 늦음은 마리나라의 계산(가장 늦는 사람 · 부르면 가장 바쁜 사람의 부름 늦음). 다시 받기는 모두(오프라인도)에게 한 번에. **다른 것**: 입력은 우리 블록(MESSENGER · CHAT SUMMARY · CONTEXT · 카드 · PERSONA · STORY · LAST MESSAGES)이고 마리나라의 프로필 블록이 아님. 한 답을 한 말로 두지 않고 사람마다의 말로 나눠 저장함(우리 저장 모양). 먼저 건 말(자율)은 Merged 방에서도 한 사람이 우리 지시문으로 씀(마리나라는 그것도 Merged 요청). **지금 없는 것(우리 지시문으로 바꿀 때 채울 것)**: 폰에서 한 일(does) · 상태 줄 · 반응 · 상태 명령 |
 | services/generation/conversation-schedule-command-runtime.ts | 226 | 다 | src/marinara/schedule-command.js | (공유 방 갈래는 우리에게 없음) |
 
 ## 말 · 방
@@ -167,6 +170,35 @@
 | routes/custom-stickers.routes.ts | 310 | 아직 | | 스티커 |
 | routes/generate/conversation-custom-assets.ts | 694 | 아직 | | 내 이모지 · 스티커를 캐릭터가 쓰기 |
 
+## 번역 (2026-11-23, 소망: "마리나라와 한 글자도 다르지 않게", DeepL · DeepLX는 뺌)
+
+**DeepL · DeepLX는 소망이 뺐어요 (2026-11-23).** 제공자는 Google(gtx)과 AI(연결 사용) 둘이에요. 옛 값 "deepl" · "deeplx"는 마리나라가 모르는 제공자를 버리는 것과 같이 버려져서 Google로 읽혀요(`normalizeTranslatorSettings`). DeepL 키 · DeepLX 주소 칸과 그 처리(키 가리기 · 서버에서 키 찾기)는 없어요.
+
+| 마리나라 파일 | 줄 | 상태 | 우리 쪽 | 마리나라와 다른 것 |
+|---|---|---|---|---|
+| server/services/translation.service.ts + routes/translate.routes.ts | 363 · 7 | 다 (DeepL · DeepLX 뺌) | src/marinara/translation.service.js | 마리나라의 DB 대신 `store`(연결 · 메시지)를 받아요: `src/phone2translate.js`. zod 대신 같은 한도 · trim의 손 검사(틀리면 "유효성 검사 오류" + details: 마리나라 오류 처리기의 "Validation Error"). **대체 연결(fallback) 없음**: 우리에게 예비 연결이 아직 없어요("꼭 할 것"). safeFetch 대신 fetch(15초 · 1MB 한도는 그대로). Google 5000자 오류 글에서 "DeepL or"를 뺐어요(DeepL이 없어서): "더 긴 텍스트에는 AI 제공자를 사용하세요." 게임 모드 갈래(`buildGameTranslationSource`)는 게임 모드가 없어서 없음. 오류 · 로그 글은 마리나라 글을 합니다체로 |
+| shared/utils/translator-defaults.ts | 95 | 다 (DeepL 열쇠 둘 뺌) | src/marinara/translator-defaults.js | |
+| shared/constants/defaults.ts | 51~58 | 다 | src/marinara/translation-prompt.js | 지시문 글자 그대로 |
+| client/stores/translation.store.ts | 99 | 다 | src/marinara/translation.store.js | zustand 대신 몇 줄짜리 같은 store |
+| client/hooks/use-translate.ts | 172 | 다 | src/marinara/use-translate.js | api.post("/translate") → 같은 브라우저에서 translateText를 바로, PATCH extra → 그 말의 `x.extra`에 넣고 저장(`saveMeta`). 열린 채팅이 아니면 저장 못 해요(마리나라는 서버라 저장해요) |
+| client/lib/translate-text.ts · draft-translation.ts | 20 · 20 | 다 | src/marinara/translate-text.js · draft-translation.js | 알림은 실리의 toastr |
+| client/hooks/use-translator-defaults.ts (+ app-settings.routes.ts의 이 열쇠 부분, TranslationSection.tsx 60~82의 알림) | 38 | 다 | src/marinara/use-translator-defaults.js | 앱 설정 → 확장 설정 `translator-defaults`(실리가 저장). 키 가리기 없음(DeepL 없음) |
+| shared/utils/quote-format.ts | 86 | 다 | src/marinara/quote-format.js | 입력창 번역 단추가 써요. 우리에게 따옴표 모양 설정이 없어서 마리나라 기본값 "straight" |
+| generate.routes.ts dispatchAutomaticTranslations · 자동 번역 표시 · /generate/status의 translating | 그 줄들 | 다 | src/phone2translate.js (`markAutomaticTranslation` · `dispatchAutomaticTranslations` · `translateGenerated`) · phone2go.js `afterTranslation` · plugin/work.mjs `translateAfter` · `status`의 `translating` | 마리나라의 "요청 한 번"(그 차례에 답한 모두) 대신 **답장 일 하나마다** 보내요(우리 일의 줄이 답장마다라서). 마리나라의 "나뉜 답"(장면마다 메시지) = 우리 말풍선들: 앞 말부터 차례로. 설정은 일을 보낼 때의 것(마리나라는 요청을 시작할 때의 것). 생성 멈추기 갈래(`generationSignal.aborted`)는 우리 답장에 멈추기가 없어서 없음. 서버 일꾼은 말마다 그 세계를 다시 읽은 자리(`withWorld`)에서 번역하고, 저장이 브라우저와 부딪히면(409) 다시 읽고 받은 번역을 그대로 넣어요(두 번까지). 플러그인이 없으면 브라우저가 같은 일을 해요(마리나라의 서버 몫) |
+| use-generate.ts waitForServerTranslationToSettle (1126~1141 · 3894~3906) | 그 줄들 | 다 | 브라우저가 만든 답: `afterTranslation`이 번역이 끝난 뒤 다시 그리고 'na-live-reply'. 서버가 만든 답: phone2keepon.js `waitForServerTranslationToSettle`(1.5초마다 `/auto/status`의 translating, 최대 30분, 실패해도 계속) → `keepSync` → 'na-live-reply' | 서버가 만든 답은 번역 표시(`automaticTranslationSource`)가 있고 번역이 아직 없을 때만 물어요(마리나라는 늘 한 번 물어요: 번역이 없으면 바로 끝나서 결과는 같아요). `/auto/status`는 번역이 도는 동안 일꾼의 줄을 기다리지 않고 바로 답해요(can · why는 마지막에 본 것) |
+| chats.storage.ts updateMessageExtraForSwipe (3006~3047) | 그 줄들 | 다 | phone2translate.js `translationChats` | 우리 말은 그 자체가 스와이프예요(받아 둔 답장 안의 말도 자기 extra를 가져요): swipeIndex는 0. "그사이 고쳤거나 숨겼으면 안 넣기" 확인은 그대로 |
+| chats.storage.ts 1648 (새 채팅은 번역 기본값부터) · chat-presets.storage.ts 423~471 · chat-setup-draft.ts 49~59 (프로필) | 그 줄들 | 일부 | 새 Orbit(`phone2store.js newWorld` → `setWorldSeed`)의 presence.meta에 기본값. 프로필: `profileTranslatorSettings` | **설정 프로필을 채팅에 얹는 기능이 아직 없어요**(화면만 있음): 얹을 때 쓸 함수만 있어요. 설정 마법사도 마리나라의 것이 없어요 |
+| chat-macros.ts prepareUserInputMessage (513~522) · ConversationInput.tsx(보낼 때 알림 · 입력창 번역 단추) | 그 줄들 | 다 | phone2translate.js `livePrepareInput` · `liveTranslateDraft`, 보내기는 phone.js `obSend`에서 | 정규식 · 매크로 단계는 Orbit에 없어서 번역만. "Post Only" 길(…PostingOriginal)은 우리에게 없어요. 입력창 번역 단추(화면)는 디자인 세션 |
+| ConversationMessage.tsx · ConversationMessageShared.tsx(번역 칸 · 번역 단추 글) · ChatArea.tsx(설정 → store, 채팅 바뀌면 비우기 · 채우기) | 그 줄들 | 다 (값). 그리기는 디자인 세션 | `liveTranslationOpen` · `liveTranslationView` · `liveTranslate` | 마리나라의 채팅 바꾸기 = 우리 방 바꾸기 |
+| TranslationSection.tsx | 429 | 값 다 · 화면 일부 | `liveTranslationSettings` · `liveSetTranslation` · `liveTranslationConnections` · `liveTranslatorDefaults` · `liveSaveTranslatorDefaults` | 화면 몫은 디자인 세션(메시지 보냄) |
+
+**우리 저장 모양에 맞춘 것**
+- 번역 설정은 Orbit 전체의 `presence.meta`(그림 설명 · 명령 스위치와 같은 자리)예요. 마리나라 열쇠 이름 그대로.
+- AI 번역의 연결: 'tr'(번역 모델, 자기 연결이 있을 때) · 'dr'(초안 모델) · 'ai'(AI 기능 모델) · 'profile:<id>'(실리 연결 프로필). 최대 토큰은 그 연결의 "최대 토큰"(초안 · 번역 모델의 `max`, AI 기능 모델의 `aiMaxTokens`), 없으면 4096. 시스템 글은 시스템 메시지로 가요(우리 다른 요청처럼 [INSTRUCTIONS]로 합치지 않아요: 마리나라와 같게). 프로필은 온도 0.3을 요청에 얹어요(실리 `sendRequest`의 overridePayload). AI 기능 모델이 실리 자신의 연결(프로필 없음)이면 실리의 `generateRaw`라 온도를 못 정하고, 서버에서는 못 보내요.
+- 커스텀 OpenAI 형식 연결의 요청 몸통은 마리나라 openai.provider의 몸통과 같아요(`tests/phone2translate.test.mjs`). Vertex · 실리 연결 방식 · Anthropic 형식은 우리 연결 코드(`ai.js callConn`)의 모양이에요(마리나라의 제공자 코드는 안 가져왔어요).
+- 말을 고쳐도 번역은 그대로예요(마리나라의 대화 모드와 같아요: 번역 단추가 원문이 바뀐 걸 보고 다시 번역). 전에는 한국어를 지웠어요. 한국어를 손으로 고치는 길은 없어졌어요(마리나라에 없어요).
+- **옛 한국어(ko) 옮기기**: 답장 지시문이 한국어를 같이 받던 때의 `x.ko`는 `x.extra.translation`으로, 그때의 원문 `x.text`는 `x.extra.translationSource`로(방의 말 · 받아 둔 답장 · 휴지통의 말 모두). 빈 ko(이미 한국어였던 말)는 지우기만. 이미 번역이 있으면 그것을 남겨요. 답장을 돌릴 때 · 폰을 열 때 · 방을 그릴 때 해요(`migrateKo`). 채팅 가져오기의 번역 확장 한국어도 같은 칸으로 들어가요.
+
 ## 2026-11-21에 다시 대 보고 채운 것
 
 - 메모를 한 사람에게 보여 주기, 되살릴 때 고정 수 막기, 날짜 지난 휴지통 비우기
@@ -216,7 +248,7 @@
 
 - [x] **연결 목록에 우리 확장의 칸 이름("초안 모델" · "AI 기능 모델")을 내지 않아요. 이름은 모델 이름이에요.** (소망, 2026-11-21.) 키는 새로 받지 않고 확장에 넣어 둔 것과 실리태번의 것을 그대로 써요(소망: "Api키는 실리 꺼랑 확장꺼 그대로"). 빠른 전환기의 "이 방이 쓸 모델 · 기본값으로 · 최근 두 개 · 즐겨찾기(순서)"는 마리나라의 `PUT /chats/:id/model` · `readChatModelOverride` · `applyChatModelOverride` · `reorderStars`를 그대로 써요(`src/marinara/chat-model.js`). 스케줄의 "생성 연결 고르기"도 같은 목록이에요. **마리나라와 다른 것**: 연결을 추가 · 삭제하는 화면, 모델 목록(catalog) 받아 오기, 저장한 모델 · 기본 모델 바꾸기는 없어요(연결은 확장 설정과 실리태번에서 정해요).
 
-- [ ] **Merged 단체방의 지시문을 우리 지시문으로 바꾸기.** (소망, 2026-11-21: "일단 merged만 마리나라꺼 쓰셈", "꼭 우리 지시문으로 수정해야할 걸로 기록해두셈".) 지금 Merged 단체방은 마리나라의 Conversation 지시문을 그대로 써요(`src/marinara/merged-conversation.js`, 잇는 곳은 `src/phone2merged.js` · `phone2go.js gatherMerged`). 그래서 Merged 방의 답에는 번역(ko) · 폰에서 한 일(does) · 상태 줄 · 반응 · 상태 명령이 없어요. 우리 답장 지시문(`src/phone2reply.js`)에 "여럿의 말을 한꺼번에 쓰는" 모양을 만들어 바꿔야 해요. 바꿀 때 `docs/PROMPT-RULES.md`를 읽고, 답을 나누는 것은 `takeMerged` 자리에서 해요.
+- [ ] **Merged 단체방의 지시문을 우리 지시문으로 바꾸기.** (소망, 2026-11-21: "일단 merged만 마리나라꺼 쓰셈", "꼭 우리 지시문으로 수정해야할 걸로 기록해두셈".) 지금 Merged 단체방은 마리나라의 Conversation 지시문을 그대로 써요(`src/marinara/merged-conversation.js`, 잇는 곳은 `src/phone2merged.js` · `phone2go.js gatherMerged`). 그래서 Merged 방의 답에는 폰에서 한 일(does) · 상태 줄 · 반응 · 상태 명령이 없어요. 우리 답장 지시문(`src/phone2reply.js`)에 "여럿의 말을 한꺼번에 쓰는" 모양을 만들어 바꿔야 해요. 바꿀 때 `docs/PROMPT-RULES.md`를 읽고, 답을 나누는 것은 `takeMerged` 자리에서 해요.
 
 - [ ] **예비 연결.** 마리나라는 연결이 실패하면 예비 연결(fallback)로 한 번 더 해요. 아직 없어요. (무작위 연결은 안 쓰는 기능이라 뺐어요 — 소망, 2026-11-21: "무작위 연결은 안 쓸 기능이야 빼".)
 - [x] **꺼 둔 이유(`disabledAutonomousIntents`) 지키기.** (2026-11-22, 작업 브랜치.) 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler.service.ts`의 `resolveAvailableIntent`)만 이걸 봐요. 그 파일을 통째로 가져와서 서버 일꾼이 돌릴 때 지켜요(`tests/pluginauto.test.mjs`). 브라우저가 돌릴 때는 마리나라처럼 안 봐요.
@@ -267,7 +299,7 @@
 | 갤러리 7921 | 일부 | 없음 | 단추 줄 · 검색 · 선택 · 탭 · 올리기 · 빈 상태는 다. 그림 줄의 단추(고정 · 내려받기 · 움직이게 · 프롬프트 복사 · 삭제), 크게 보기, 검색 결과 줄은 그림이 있어야 뜨는 것이라 없음 |
 | 기억 회상(대화) 9995 + 기억 창 10855 | 다 | 없음 | 기억 줄(잊기 단추)은 기억이 있어야 뜸 |
 | 기능 호출 10177 | 없음 | | 소망이 빼라고 함(2026-11-21) |
-| 번역 10266 | 다 | 없음 | |
+| 번역 10266 | 다 | 값 읽기 · 쓰기 (2026-11-23) | 화면의 칸(서비스 · 언어 둘 · 연결 · 프롬프트 둘 · 스위치 넷)이 마리나라의 번역 설정에 이어졌어요(`liveTranslationSettings` · `liveSetTranslation`). 남은 것은 디자인 세션: DeepL · DeepLX 고르기 빼기, 프롬프트 칸에 기본 지시문 보이기 · 복원, 번역기 기본값 저장 · 잊기 단추. 아래 "번역" |
 | 자율 메시지 6921 | 다 | 켜기 · 체크인 제한 · 캐릭터 간 대화 · 재생성 · 시간대 · 기기 설정 사용 · 스케줄 편집 | "스케줄" 토글은 동작 없음(반영 쪽에 스케줄을 통째로 끄는 함수가 없음) |
 | 자동 요약 10009 + 요약 편집 창 | 다 | 없음 | 요약 줄(펼쳐서 요약 · 핵심 세부 고치기)은 요약이 있어야 뜸. 의미 기반 검색의 세 값은 막대(슬라이더) 대신 숫자 칸 |
 | 섹션 머리마다: 도움말 · 새 창으로 열기 | 도움말만 | 없음 | 도움말은 화면 맨 위에 글로 늘 보임(마리나라는 ? 를 눌러야 뜸). 새 창으로 열기는 소망이 빼라고 함 |
@@ -298,7 +330,7 @@
 | 답장 (MessageReplyPreview) | 다 | 다 | `liveReplyTo` · `liveReplyDraft` · `liveCancelReply` · `sendLive(..., { replyTo })`. 글이 없는 말에는 단추가 꺼져요. 입력칸 위 미리 보기(✕ 취소), 보낸 내 말 위 인용 |
 | 반응 추가 | 다 | 다 | 사용자 지정 이모지 탭 없음 |
 | 북마크 · 고정 · 메모 (MessageMarks) | 다 | 다 | 북마크 이름 칸, 고정 설명 글(최대 10개), 비공개 메모(저장 · 제거)까지. 메모는 그 메뉴 안이 아니라 아래 시트에서 써요. 메모를 캐릭터 하나에게 보여 주기(롤플레이용)는 없음. 말의 메모 아이콘을 눌러 메모 보기 없음 |
-| 번역 | 다 | 다 | 우리 것은 "재번역"(한국어 줄 다시 받기) |
+| 번역 | 다 | 다 | 2026-11-23부터 마리나라의 번역 단추(`liveTranslate`: 번역 · 숨기기). 전의 "재번역"(한국어 줄 다시 받기)은 없어졌어요. 단추 글(Translate · Hide translation)은 디자인 세션 |
 | 편집 | 다 | 다 | |
 | 재생성 | 다 | 다 | 터치에서 "새 스와이프로 재생성할까요?" 확인 창 없음. 입력칸 글을 지침으로 쓰는 "재생성(지침)" 없음 |
 | AI에게 숨기기 | 다 | 다 | 숨긴 말을 접어 두는 설정(접힌 줄 "AI에게 숨김 · 표시") 없음 |

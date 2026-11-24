@@ -58,10 +58,34 @@ const synced = {
             const fresh = (r.messages || []).filter(x => !had.has(x.id) && String(x.from || '').trim().toLowerCase() !== persona && String(x.text || '').trim() && !x.extra?.autonomous);
             if (!fresh.length) continue;
             const by = [...new Set(fresh.map(x => x.from))];
-            try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-reply', { detail: { from: 'server', room: r.id, by, auto: false, regen: false } })); } catch { /* no screen */ }
+            const cue = () => { try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-reply', { detail: { from: 'server', room: r.id, by, auto: false, regen: false } })); } catch { /* no screen */ } };
+            // (the server translates a reply after it is saved — automatic translation, phone2translate.js —: the completion cue waits
+            //  for it and for its save, as Marinara's does — use-generate.ts 3894~3906 waitForServerTranslationToSettle)
+            if (fresh.some(translationOwed)) waitForServerTranslationToSettle(r.id).finally(cue); else cue();
         }
     },
 };
+// (a message whose automatic translation the server took on and has not saved yet)
+const translationOwed = x => typeof x.extra?.automaticTranslationSource === 'string' && !(typeof x.extra.translation === 'string' && x.extra.translation && x.extra.translationSource === x.text && x.extra.automaticTranslationSource === x.text);
+// 마리나라 use-generate.ts waitForServerTranslationToSettle (1126~1141): 서버의 그 방 번역이 끝날 때까지(최대 30분) 1.5초마다 물어보고
+// (/auto/status의 translating: plugin/work.mjs), 끝나면 그 저장을 받아요. 묻다가 실패해도 계속 물어요(다시 연결되는 동안)
+export const TRANSLATION_SETTLE = { pollMs: 1_500, maxMs: 30 * 60_000 };
+export async function waitForServerTranslationToSettle(room, { wait = ms => new Promise(r => setTimeout(r, ms)), now = () => Date.now() } = {}) {
+    const startedAt = now();
+    while (now() - startedAt < TRANSLATION_SETTLE.maxMs) {
+        try {
+            const id = keep.id();
+            if (!id) break;
+            const status = await http('/auto/status', J({ id }));
+            const row = (Array.isArray(status?.rooms) ? status.rooms : []).find(x => x?.room === room);
+            if (!row?.translating) break;
+        } catch {
+            // Keep the independent completion notification pending through a reconnect.
+        }
+        await wait(TRANSLATION_SETTLE.pollMs);
+    }
+    await keepSync();
+}
 
 export const keep = makeKeep({ api, now, synced });
 // 지금 채팅의 Orbit 데이터를 다 읽었을 때 끝나는 약속 (플러그인이 없으면 바로)

@@ -272,7 +272,7 @@ export function orbitSetPage(T, face) {
         trans: () => { const sv = g('trSvc', 'google'), ai = sv === 'ai';
             return H + cd(sel('trSvc', '서비스', [['google', 'Google 번역'], ['deepl', 'DeepL API'], ['deeplx', 'DeepLX (자체 호스팅)'], ['ai', 'AI (연결 사용)']], 'google'), inp('trIn', '모델 언어', '', ai ? 'English' : 'en'), inp('trOut', '내 언어', '', ai ? 'Korean' : 'ko'))
                 + hp(`내가 보내는 메시지는 모델 언어로, 모델의 응답은 내 언어로 번역됩니다. ${ai ? 'English, Japanese, Spanish 같은 언어 이름을 쓰세요.' : 'en, ja, es, de, fr, zh, ko 같은 언어 코드를 쓰세요.'}`)
-                + (ai ? cd(sel('trConn', '연결', [['', '연결 선택…']], '')) + hp('번역에 사용할 AI 연결')
+                + (ai ? cd(sel('trConn', '연결', [['', '연결 선택…'], ...(T.trConns || []).map(c => [c.id, c.name || c.model || c.id])], '')) + hp('번역에 사용할 AI 연결')
                     + area('trInP', '보내는 메시지 프롬프트', '', '', { rows: 5, mono: true, tail: `<i class="os_sp"></i>${g('trInP', '') ? soon('복원', 'rotate-ccw', 'os_go', { aria: '기본 프롬프트 복원' }) : ''}`, hint: 'AI 번역이 쓰는 시스템 프롬프트입니다. {{targetLanguage}}는 위의 해당 언어로 바뀝니다.' })
                     + area('trOutP', '받는 응답 프롬프트', '', '', { rows: 5, mono: true, tail: `<i class="os_sp"></i>${g('trOutP', '') ? soon('복원', 'rotate-ccw', 'os_go', { aria: '기본 프롬프트 복원' }) : ''}` }) : '')
                 + (sv === 'deepl' ? cd(inp('trKey', 'DeepL API 키', '', 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx')) : '')

@@ -17,11 +17,12 @@ function world() {
 }
 const ANSWER = { state: '14:02 · office · canteen · ~14:30', reply: ['Oui maman.', '방금 먹었어', ' '], ko: ['응 엄마.', ''], does: [{ app: 'bank, cards & wallet', what: 'pays 6 EUR at the canteen' }, { app: 'Wallet', what: 'x' }, { app: 'Smart fridge', what: 'looks inside' }, { app: 'Notes' }] };
 
-test('답을 말풍선으로: 번호 · 실제 시각 · 한국어 · 상태(시각 뺀 것), 한 일은 마지막 말풍선에', () => {
+test('답을 말풍선으로: 번호 · 실제 시각 · 상태(시각 뺀 것), 한 일은 마지막 말풍선에; 답에 ko가 있어도 안 받아요 (번역은 마리나라의 번역 기능)', () => {
     const { m, r } = world();
-    assert.deepEqual(R.takeReply(m, 'mara', r.id, ANSWER, { now: T0 + 60_000 }), { said: 2, does: 3, state: 'office · canteen · ~14:30', react: '' });
+    const got = R.takeReply(m, 'mara', r.id, ANSWER, { now: T0 + 60_000 });
     const [, a, b] = r.messages;
-    assert.deepEqual([a.n, a.from, a.text, a.ko, a.state, a.at, a.does], [2, 'Mara', 'Oui maman.', '응 엄마.', 'office · canteen · ~14:30', T0 + 60_000, undefined]);
+    assert.deepEqual(got, { said: 2, does: 3, state: 'office · canteen · ~14:30', react: '', ids: [a.id, b.id] });
+    assert.deepEqual([a.n, a.from, a.text, a.ko, a.extra, a.state, a.at, a.does], [2, 'Mara', 'Oui maman.', undefined, undefined, 'office · canteen · ~14:30', T0 + 60_000, undefined]);
     assert.deepEqual([b.n, b.text, b.ko, b.at], [3, '방금 먹었어', undefined, T0 + 60_001]);
     assert.deepEqual(b.does, [{ app: 'Bank, cards & wallet', what: 'pays 6 EUR at the canteen' }, { app: 'Bank, cards & wallet', what: 'x' }, { app: 'Smart fridge', what: 'looks inside' }]);
     assert.notEqual(a.id, b.id);
@@ -35,7 +36,7 @@ test('답을 말풍선으로: 번호 · 실제 시각 · 한국어 · 상태(시
 test('글로 온 답도 읽어요(앞뒤 말 · 코드 울타리), 못 읽으면 아무것도 안 넣어요', () => {
     const { m, r } = world();
     R.takeReply(m, 'Mara', r.id, 'Here you go:\n```json\n{ "state": "home", "reply": ["ok"], "ko": ["응"], "does": [] }\n```', { now: T0 + 1 });
-    assert.deepEqual(r.messages.slice(1).map(x => [x.text, x.ko, x.state]), [['ok', '응', 'home']]);
+    assert.deepEqual(r.messages.slice(1).map(x => [x.text, x.ko, x.state]), [['ok', undefined, 'home']]);
     const was = JSON.stringify(m);
     for (const bad of ['no json here', '{ "reply": "not a list" }', '{ broken', null, [1]]) assert.throws(() => R.takeReply(m, 'Mara', r.id, bad, { now: T0 + 2 }), /답장을 읽을 수 없습니다:/);
     assert.throws(() => R.takeReply(m, 'Lio', r.id, ANSWER), /답장을 넣을 채팅방이 없습니다/);
@@ -44,7 +45,8 @@ test('글로 온 답도 읽어요(앞뒤 말 · 코드 울타리), 못 읽으면
 
 test('읽고 답 안 함: 말풍선 없이 한 일 · 상태만 남아요(act); 아무것도 없으면 읽음 표시만; 이미 한 말은 또 안 해요', () => {
     const { m, r } = world();
-    assert.deepEqual(R.takeReply(m, 'Mara', r.id, { state: 'tram', reply: [], does: [{ app: 'Diary', what: 'writes it down' }] }, { now: T0 + 5 }), { said: 0, does: 1, state: 'tram', react: '' });
+    const got = R.takeReply(m, 'Mara', r.id, { state: 'tram', reply: [], does: [{ app: 'Diary', what: 'writes it down' }] }, { now: T0 + 5 });
+    assert.deepEqual(got, { said: 0, does: 1, state: 'tram', react: '', ids: [r.messages[1].id] });
     assert.deepEqual([r.messages[1].act, r.messages[1].text, r.messages[1].does.length, r.messages[1].state], [true, '', 1, 'tram']);
     assert.match(feedText(m, 'Mara', feedRows(m, 'Mara'), { tz: 'UTC' }), /— tram\n\[#1\] Ren: 점심 먹었어\?\n\[#2\] Mara \[Diary\]: writes it down$/);
     const n = r.messages.length;
@@ -175,14 +177,4 @@ test('끝난 일은 최근 것만 남겨요 (기다리는 것 · 실패한 것�
 test('폰 1은 이 파일을 안 불러요', async () => {
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2run.js' && f !== 'phone2go.js')) assert.doesNotMatch(await src(f), /from '\.\/phone2run\.js'/, f);
-});
-
-test('답장의 한국어는 원문과 같은 모양으로: 원문에 없는 마침표 · 쉼표는 떼고, 있으면 둬요', () => {
-    const m = { phones: {} };
-    L.startFresh(m, { persona: 'Ren', scope: 'test' });
-    L.liveWorld(m).phones = { mara: { owner: 'Mara' } };
-    const r = L.ensureRoom(m, ['Mara']);
-    L.sendLive(m, r.id, 'hi', 1);
-    R.takeReply(m, 'Mara', r.id, { state: 'home', reply: ['I was thinking maybe we should go', 'Fine.', 'ok'], ko: ['생각해 봤는데, 우리 가는 게 좋겠어.', '알았어.', '응.'] }, { now: 5 });
-    assert.deepEqual(r.messages.slice(1).map(x => x.ko), ['생각해 봤는데 우리 가는 게 좋겠어', '알았어.', '응']);
 });

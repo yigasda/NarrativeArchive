@@ -19,9 +19,13 @@ import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies, enqueueJob, renamePersona, setDrawerSeed } from './phone2store.js';
 import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
 import { branchRoom, replyDraftOf, purgeTrash, markMessages, markedMessages, trashOf, restoreMessages, emptyTrash, dropRoom, roomTrash, restoreRoom, emptyRoomTrash, addMember, removeMember } from './phone2room.js';
-import { dropMessages, editMessage, replyTail, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
-import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
-import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
+import { dropMessages, editMessage, replyTail, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes } from './phone2edit.js';
+import { migrateKo, markAutomaticTranslation, autoTranslateOn, browserAutoTranslate, setTranslationConnectionList } from './phone2translate.js';
+// 번역 (마리나라의 번역 기능: phone2translate.js). 화면이 부르는 것:
+//   liveTranslationSettings · liveSetTranslation · liveTranslationConnections (채팅 설정 › 번역) · liveTranslatorDefaults · liveSaveTranslatorDefaults
+//   liveTranslationOpen (방을 그릴 때) · liveTranslationView (말 하나) · liveTranslate (번역 단추) · liveTranslationSubscribe · liveTranslating
+//   livePrepareInput (보내기 전에) · liveTranslateDraft (입력창의 번역 단추)
+export { liveTranslationSettings, liveSetTranslation, liveTranslationConnections, liveTranslatorDefaults, liveSaveTranslatorDefaults, liveTranslationOpen, liveTranslationView, liveTranslate, liveTranslationSubscribe, liveTranslating, livePrepareInput, liveTranslateDraft } from './phone2translate.js';
 import { importRows, importInto, importFile, importedOf, chatKey } from './phone2import.js';
 import { liveChatTail, liveSnapBehind, liveSnapExtend, liveSnapNow } from './phone2snap.js';
 import { liveStoryText } from './phone2story.js';
@@ -110,7 +114,7 @@ export function liveFollowPersona(real) {
     Promise.resolve().then(() => saveMeta()).catch(err => console.warn('[narrative-archive] live persona', err));
     return true;
 }
-setDrawerSeed((d, w, real) => { liveFollowPersona(real); });
+setDrawerSeed((d, w, real) => { liveFollowPersona(real); migrateKo(real); });
 // (a 폰 2 app request asks through its drawer, and only while there is no snapshot: made here, lengthened only before a reply)
 setStoryKeeper(real => keepUpStory(real));
 // the words a request is refused with while a 폰 2 begun from the story has no snapshot
@@ -161,19 +165,35 @@ function browserLock(real, refused = () => {}) {
     };
 }
 // lock: 방 자물쇠 (빼면 브라우저의 것. 서버 플러그인의 일꾼은 자기 것을 줘요: plugin/work.mjs serverLock. null: 자물쇠 없이)
+// translate(방 id, 말 id들) → 약속: 답장 뒤 자동 번역을 보내는 자리 (빼면 브라우저가 해요: phone2translate.js browserAutoTranslate.
+//   서버 플러그인의 일꾼은 그 세계를 다시 읽는 자리에서 해요: plugin/work.mjs). 마리나라는 답이 저장된 뒤 서버가 하고, 완료 알림은
+//   그 번역이 끝날 때까지 기다려요 (use-generate.ts waitForServerTranslationToSettle): 'na-live-reply'도 그 뒤에 가요
 // server: 서버 플러그인의 일꾼이 돌려요. 마리나라의 서버처럼: 캐릭터끼리 주고받기는 안 하고(마리나라는 브라우저만 해요:
 //   use-autonomous-messaging.ts 232~262), 먼저 건 말이 실패하면 "걸고 있는 중" 표시만 풀어요(server-autonomous-scheduler.service.ts).
 //   브라우저는 마리나라의 브라우저처럼 실패하면 /activity/assistant를 불러요(use-autonomous-messaging.ts 225~227)
-export async function liveGo(real, { onChange = () => {}, lock, server = false } = {}) {
+export async function liveGo(real, { onChange = () => {}, lock, server = false, translate = null } = {}) {
     if (lock === undefined) lock = browserLock(real, () => retrySoon(real, onChange));
-    return goNow(real, onChange, lock, server);
+    return goNow(real, onChange, lock, server, translate || ((roomId, ids) => browserAutoTranslate(real, roomId, ids)));
 }
-async function goNow(real, onChange, lock, server = false) {
+async function goNow(real, onChange, lock, server = false, translate = () => Promise.resolve()) {
     followSchedule(real); await pickResponders(real); holdReplies(real);
     for (const id of Object.keys(liveWorld(real)?.messenger?.rooms || {})) syncUser(real, id);
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const line = saveLine();
     let asked = null;
+    // (Marinara's dispatchAutomaticTranslations: the reply's saved messages, in order, after it is saved — not holding the
+    //  generation lock. The completion notification waits for it: use-generate.ts 3894~3906)
+    const afterTranslation = (job, notify) => {
+        const ids = job.trIds || [];
+        delete job.trIds;
+        const w = liveWorld(real), cue = () => { try { notify(); } catch (err) { console.warn('[narrative-archive] live reply cue', err); } };
+        // (nothing to translate: the notification goes now)
+        if (!ids.length || !w || w.id !== job.world || !autoTranslateOn(real)) return cue();
+        let p;
+        try { p = Promise.resolve(translate(job.room, ids)); } catch (err) { p = Promise.reject(err); }
+        // (then the messages are read again — Marinara invalidates the messages query — and the notification goes)
+        p.catch(() => {}).finally(() => { tell(); cue(); });
+    };
     const out = await runLive(real, {
         save: line.save, alive: () => open(real), enter: lock ? room => lock.enter(room) : null,
         // (a command switched off for this chat is not taken, even if the answer carries it: Marinara's filterEnabledConversationCommands)
@@ -191,7 +211,13 @@ async function goNow(real, onChange, lock, server = false) {
             await keepUpStory(real, tell);
             return gatherJob(real, job);
         },
-        took: (job, got) => { const w = liveWorld(real); if (w && w.id === job.world && got?.said && asked) keepAsked(w, w.messenger?.rooms?.[job.room], job, asked); asked = null; },
+        took: (job, got) => {
+            const w = liveWorld(real);
+            if (w && w.id === job.world && got?.said && asked) keepAsked(w, w.messenger?.rooms?.[job.room], job, asked); asked = null;
+            // (automatic translation: the reply's messages are marked in the same save as the reply — Marinara persists the
+            //  mark before message_saved, generate.routes.ts 11862~11873 · 12265)
+            if (w && w.id === job.world && got?.ids?.length) job.trIds = markAutomaticTranslation(real, job.room, got.ids);
+        },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
         stateFor: job => { if (!activeSchedule(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '' })?.text || ''; },
         after: async (job, got) => {
@@ -205,7 +231,8 @@ async function goNow(real, onChange, lock, server = false) {
                     room.turn = { spoke: (got.speakers || []).map(liveKey) };
                     if (!job.regen) noteAssistant(real, job.room, '');
                     // (Marinara saves a merged reply under its first character, and names that one in the notification)
-                    replied(job, [job.owner, ...(got.speakers || []).filter(n => liveKey(n) !== liveKey(job.owner))]);
+                    const by = [job.owner, ...(got.speakers || []).filter(n => liveKey(n) !== liveKey(job.owner))];
+                    afterTranslation(job, () => replied(job, by));
                 }
                 tell();
                 return;
@@ -233,7 +260,7 @@ async function goNow(real, onChange, lock, server = false) {
             if (w && w.id === job.world && got?.said && !job.regen && handOff(real, job)) await line.save();
             // (a group room, after a message a character wrote first: another may answer it, as Marinara's loop does)
             if (!server && w && p && w.id === job.world && job.auto && got?.said && exchangeAfter(real, job)) await line.save();
-            if (w && w.id === job.world && got?.said) replied(job, [job.owner]);
+            if (w && w.id === job.world && got?.said) afterTranslation(job, () => replied(job, [job.owner]));
             tell();
         },
     });
@@ -961,8 +988,8 @@ export const liveEmptyRoomTrash = async (real, roomId = '') => kept(emptyRoomTra
 export const liveAddMember = async (real, roomId, name) => kept(addMember(mine(real), roomId, name));
 export const liveRemoveMember = async (real, roomId, name) => kept(removeMember(mine(real), roomId, name));
 
-// 말 고치기: 내 말이든 캐릭터 말이든 글을 바꿔요 ({ text } 원문, { ko } 한국어만, 둘 다도 돼요). 원문을 바꾸면 그 말의
-// 한국어는 지워져요(다시 받으려면 liveRetranslate). 답장을 다시 받지는 않아요. 저장까지 해요  → 바뀐 그 말 (바뀐 게 없으면 null)
+// 말 고치기: 내 말이든 캐릭터 말이든 글을 바꿔요 ({ text } 원문). 번역은 마리나라처럼 그대로 둬요 (번역 단추가 원문이 바뀐 걸 보고
+// 다시 번역해요: liveTranslate). 답장을 다시 받지는 않아요. 저장까지 해요  → 바뀐 그 말 (바뀐 게 없으면 null)
 export async function liveEditMessage(real, roomId, msgId, change = {}) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     const x = editMessage(real, roomId, msgId, change);
@@ -1003,36 +1030,12 @@ export const liveSwipeDrop = (real, roomId) => swipeDrop(real, roomId, () => dro
 export const liveSwipeDropMany = (real, roomId, nos) => swipeDrop(real, roomId, () => dropSwipes(real, roomId, nos));
 // 지금 보이는 답장만 남기고 받아 둔 다른 답장을 모두 지우기
 export const liveSwipeDropOthers = (real, roomId) => swipeDrop(real, roomId, () => dropOtherSwipes(real, roomId));
-// 받아 둔 답장 목록: 번호순으로 [{ no (1부터, liveSwipeInfo의 at과 같은 번호), now (지금 보이는 것), bubbles: [{ text, ko }] }].
+// 받아 둔 답장 목록: 번호순으로 [{ no (1부터, liveSwipeInfo의 at과 같은 번호), now (지금 보이는 것), bubbles: [{ text, translation }] }].
 // 넘길 답장이 없으면 []. liveSwipeInfo와 같은 상태를 봐요 (그릴 때마다 불러도 돼요)
 export function liveSwipeList(real, roomId) {
     if (!real || !open(real)) return [];
     try { settleSwipes(real, roomId); return swipeList(real, roomId); } catch { return []; }
 }
-// 한국어 다시 받기 (ids: 말의 id 하나 또는 여럿): 번역 모델에 다시 물어서 그 말들의 한국어만 바꿔요. 폰 1의 번역 지시문
-// 그대로, 그 방 캐릭터의 말투 표 · 주변 인물 · 용어집을 같이 보내요. 실패하면 있던 한국어가 그대로예요.
-//   → { count (바뀐 수), left (한 번에 다 못 해서 남은 수) }
-export async function liveRetranslate(real, roomId, ids) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
-    const w = liveWorld(real), { owner, rows, left } = koRows(real, roomId, ids);
-    if (!rows.length) throw new Error('번역할 메시지가 없습니다.');
-    const p = livePhone(real, owner), voices = p ? voiceRows(p).map(v => ({ who: voiceWho(v), style: v.style })) : [], entries = glossaryEntries(real);
-    let count = 0;
-    for (const chunk of koChunks(rows)) {
-        const input = koInput(chunk.rows, { owner, around: p ? aroundBlock(p) : '', voices, gloss: glossaryIn(entries, chunk.rows.map(r => r.x.text).join('\n')) });
-        const out = await askTranslator(input, { system: AI_SYS_PHONE_KO, maxTokens: Math.min(16384, 1500 + chunk.size * 3) });
-        // (the 폰 2 a request began with is gone: its answer is not put anywhere)
-        if (!here(real, w)) throw new Error('실시간 폰이 변경되었습니다.');
-        // (the object is the first { … } of the answer; an answer that can't be read changes nothing)
-        let got = null;
-        try { got = parseJson(String(out).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }); } catch { got = null; }
-        count += takeKo(chunk.rows, got);
-    }
-    if (!count) throw new Error('번역을 받지 못했습니다.');
-    await saveMeta();
-    return { count, left };
-}
-
 // ---- 이모지 반응 (phone2react.js). 사람이 눌렀을 때만 해요.
 // 반응 달기 · 바꾸기 · 지우기: by(방에 있는 사람)의 반응을 e로. 같은 걸 다시 달거나 e가 null(또는 '')이면 지워요.
 // 이모지는 아무거나 되지만 한 덩어리만 (글자 · 여러 개는 안 돼요). 저장까지 해요  → 바뀐 그 말
@@ -1126,6 +1129,8 @@ const connRow = id => {
     return id === 'ai' ? { id, name: model, model, provider: String(c.mainApi || 'sillytavern') } : null;
 };
 export const liveModelConnections = () => [connRow('dr'), connRow('ai'), ...aiProfiles().map(p => ({ id: `profile:${p.id}`, name: String(p.name || p.id), model: String(p.model || ''), provider: String(p.api || '') }))].filter(Boolean);
+// (the AI translation's connection list is the same list, with the translation model first when it has its own: phone2translate.js)
+setTranslationConnectionList(() => liveModelConnections());
 const roomChat = room => ({ connectionId: room.connectionId || null, metadata: room.model || {} });
 export function liveRoomModel(real, roomId) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId];

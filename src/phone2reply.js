@@ -40,7 +40,7 @@ YOU GET
 - WEATHER NOW: the real weather where you are.
 - RECENT ON THE PHONE: when you last used each app.
 - SITUATIONS: matters still open, what is known and what is not.
-- ${O}'s card, PERSONA (who ${P} is), VOICES (how each person's words read once translated into Korean, and to whom: for "ko" only), PEOPLE AROUND and OWNER DOESN'T KNOW. Sometimes STORY (the story so far, lived outside MESSENGER) and LAST MESSAGES (the last things said in it, word for word), TYPED AND DELETED (${P} typed these and deleted them; you may have seen "typing…"), and WHY NOW (${P} sent no new text: you write first for this reason, or it is what ${P} just did).
+- ${O}'s card, PERSONA (who ${P} is), PEOPLE AROUND and OWNER DOESN'T KNOW. Sometimes STORY (the story so far, lived outside MESSENGER) and LAST MESSAGES (the last things said in it, word for word), TYPED AND DELETED (${P} typed these and deleted them; you may have seen "typing…"), and WHY NOW (${P} sent no new text: you write first for this reason, or it is what ${P} just did).
 
 STATE FIRST
 "state": where you are, what you are doing and until when, from NOW, your local time and the chat. Your last status is only where you started; as the hours pass, your day moves on (a nurse who began at home before a night shift is on the ward by 22:00). Then the texts, from there.
@@ -57,7 +57,6 @@ TEXTING
 - An emoji on the last text someone sent, when it truly fits how you feel right then: "react", who sent it and the emoji. Along with what you text, or by itself. Or none: "".
 - What SITUATIONS leaves "open" and what OWNER DOESN'T KNOW holds, you don't know: asked, you don't know. Weather is WEATHER NOW.
 - "reply" in one of the languages you text in, or a mix of two naturally; very rarely, one you know but seldom use. With no LANGUAGES, the language you really text ${P} in.
-- "ko": the same bubbles in Korean, the way VOICES says you sound, each with its bubble's own punctuation: no full stop or comma the bubble doesn't have; "" for a bubble already in Korean.
 
 THE PHONE — what you might do on it, and when
 - Diary: when the talk stirred something you want to sort out alone: hurt, joy, worry, a decision.
@@ -86,24 +85,8 @@ THE PHONE — what you might do on it, and when
 JSON (one object, nothing before or after it)
 { "state": "HH:MM · place · doing · ~until",
   "reply": the words you type now, one bubble each, none already in MESSENGER,
-  "ko": the same bubbles in Korean,
   "react": "" or { "to": "${P}", "emoji": "…" },
   "does": [{ "app": "Delivery", "what": "orders pad thai from the place downstairs, 14 EUR" }] }`;
 }
 // the apps "does" may name, the same as the reflection's record kinds can show (tests/phone2live.test.mjs keeps them in step)
 export const PHONE2_APPS = ['Diary', 'Voice memo', 'Notes', 'Search', 'Photos', 'Messages', 'Calls', 'Calendar', 'Posts', 'Mail', 'Delivery', 'Shopping', 'Bank, cards & wallet', 'Investments', 'Places', 'Health', 'Alarms', 'Files'];
-// "ko" as the app keeps it: one per bubble, in order; a "" (a bubble already in Korean) or a missing one is that bubble itself
-export const phone2Ko = (reply = [], ko = []) => (Array.isArray(reply) ? reply : []).map((r, i) => (typeof ko?.[i] === 'string' && ko[i].trim() ? ko[i] : String(r ?? '')));
-// the Korean typed the way its bubble was: a full stop or a comma the original doesn't have is taken off (the model adds
-// them however it is asked). Only a sentence's full stop (before a space or at the end) and a comma between words: an
-// ellipsis, a decimal point, a dot inside a word (an address) and a thousands comma stay
-const STOP = /(?<![.\d])[.。](?=\s|$)/g, COMMA = /(?<!\d)[,，、]|[,，、](?!\d)/g;
-export function koLike(text, ko) {
-    const t = String(text ?? ''), has = re => { re.lastIndex = 0; return re.test(t); };
-    let k = String(ko ?? '');
-    if (!k.trim()) return k;
-    if (!has(STOP)) k = k.replace(STOP, '');
-    else if (!/(?<![.\d])[.。]\s*$/.test(t)) k = k.replace(/(?<![.\d])[.。]\s*$/, '');
-    if (!has(COMMA)) k = k.replace(COMMA, ' ');
-    return k.split('\n').map(l => l.replace(/[ \t]{2,}/g, ' ').trim()).join('\n').trim();
-}

@@ -39,6 +39,8 @@ async function stage(t, { hoursAgo = 1 } = {}) {
         const body = await bodyOf(req);
         asked.push(body);
         if (gate) await gate;
+        // (an automatic translation's request: held while a test holds translations — trGate)
+        if (trGate && String(body?.messages?.[0]?.content || '').startsWith('You are a translator')) await trGate;
         const n = asked.length;
         res.setHeader('content-type', 'application/json');
         res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ reply: [`answer ${n}`], status: '' }) }, finish_reason: 'stop' }] }));
@@ -102,6 +104,7 @@ async function busyReply(S, text, ms = 300) {
     return job;
 }
 const texts = room => room.messages.map(x => [x.from, x.text]);
+let trGate = null;
 
 test('그날 그대로: 화면이 꺼진 동안 서버가 늦은 답장을 보냈어요 → 화면을 켜자마자 틱이 먼저 돌아도 또 답하지 않아요. 서버의 답장은 바로 보여요', async t => {
     const S = await stage(t);
@@ -321,4 +324,34 @@ test('이 채팅의 페르소나를 채팅에 적어 둬요 (서버가 실리를
     setContext({ ...globalThis.SillyTavern.getContext(), chatMetadata: other });
     assert.equal(await KO.keepPersona('varo.png'), false);
     assert.equal(other.narrative_archive.stPersona, undefined);
+});
+
+test('서버가 쓴 늦은 답장의 자동 번역: 브라우저의 "답이 끝났다" 신호는 서버의 번역이 끝나 저장된 뒤에 가요 (마리나라 waitForServerTranslationToSettle)', async t => {
+    const S = await stage(t);
+    const poll = KO.TRANSLATION_SETTLE.pollMs; KO.TRANSLATION_SETTLE.pollMs = 30;
+    let open;
+    trGate = new Promise(r => { open = r; });
+    t.after(() => { KO.TRANSLATION_SETTLE.pollMs = poll; open?.(); trGate = null; });
+    S.w.presence.meta = { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
+    await busyReply(S, 'so tired');
+    page.hidden = true;
+    await sleep(350);
+    assert.equal(await S.auto.sweep(), 1);
+    page.hidden = false; page.details.length = 0;
+    const ticking = TICK.tickOnce();
+    // (the server's reply is in, marked for translation; the cue waits while the server still translates)
+    await until(() => S.room.messages.some(x => x.text === 'answer 1'));
+    await sleep(120);
+    const reply = S.room.messages.find(x => x.text === 'answer 1');
+    assert.deepEqual([reply.extra?.automaticTranslationSource, reply.extra?.translation], ['answer 1', undefined]);
+    assert.deepEqual(page.details.filter(d => d.room && 'regen' in d), []);
+    assert.equal((await S.auto.status(S.sid))[0].translating, true);
+    open();
+    await until(() => page.details.some(d => d.room && 'regen' in d));
+    assert.deepEqual(page.details.filter(d => d.room && 'regen' in d), [{ from: 'server', room: S.room.id, by: ['Mara'], auto: false, regen: false }]);
+    // (by then the browser has the translation the server saved)
+    const now = S.room.messages.find(x => x.id === reply.id) || S.room.messages.find(x => x.text === 'answer 1');
+    assert.equal(now.extra.translationSource, 'answer 1');
+    assert.ok(now.extra.translation);
+    await ticking;
 });

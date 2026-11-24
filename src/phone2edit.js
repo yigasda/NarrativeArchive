@@ -1,18 +1,14 @@
-// 폰 2(실시간) 메신저의 말 고치기: 지우기 · 글 고치기 · 답장 넘기기(스와이프) · 한국어 다시 받기 (docs/PHONE2-PLAN.md "메신저의 말 고치기").
-// 이 파일은 방의 말만 바꾸고, 요청 글과 답 읽기를 만들어요. 모델을 부르고 저장하는 건 부르는 쪽(답장을 돌리는 파일)이 해요.
+// 폰 2(실시간) 메신저의 말 고치기: 지우기 · 글 고치기 · 답장 넘기기(스와이프) (docs/PHONE2-PLAN.md "메신저의 말 고치기").
+// 이 파일은 방의 말만 바꿔요. 저장하는 건 부르는 쪽(답장을 돌리는 파일)이 해요.
 //   지우기: 메신저에서만 지워요. 이미 캐릭터 폰에 반영된 것 · 롤플에 전한 것 · 줄여 둔 옛 대화(요약)는 그대로예요.
 //           남은 말의 번호는 안 바뀌어요.
 //   답장 넘기기(스와이프): 맨 끝 답장을 옆으로 넘겨 새로 받고, 받아 둔 답장들 사이를 오가요. 받아 둔 건 안 버려요.
-//   한국어 다시 받기: 고른 말의 한국어만. 지시문은 폰 1의 번역 지시문 그대로(같은 칸 이름으로 보내요).
+//   번역은 마리나라의 번역 단추가 해요 (phone2translate.js): 여기서는 안 다뤄요.
 // 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
 import { toTrash } from './phone2room.js';
 import { liveWorld, liveKey } from './phone2store.js';
 import { liftReacts, putBack } from './phone2react.js';
-import { koLike } from './phone2reply.js';
-
-// lines · chars: 번역 요청 하나에 싣는 말의 수 · 글자 수; max: 한 번에 다시 번역하는 말의 수
-export const EDIT = { lines: 60, chars: 9000, max: 240 };
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
 function roomOf(m, id) {
@@ -37,20 +33,18 @@ export function dropMessages(m, roomId, ids) {
 }
 
 // 말 고치기: 글을 바꿔요. 빈 글로는 못 바꿔요(지우기를 써요). 통화 · 말 없는 메시지는 못 고쳐요.
-//   text: 새 원문. 원문이 바뀌면 그 말의 한국어는 지워요(안 맞게 되니까): ko를 같이 주면 그걸로 둬요
-//   ko만 주면 한국어만 바꿔요 (''이면 지워요; 원문과 같으면 한국어 칸을 비워요)
+//   text: 새 원문. 번역(extra.translation …)은 마리나라처럼 그대로 둬요: 마리나라의 대화 모드는 글을 고쳐도 번역 칸을 안 건드려요
+//   (번역 단추는 원문이 바뀐 걸 보고 다시 번역해요: phone2translate.js)
 // 번호 · 시간 · 반응 · 표시는 그대로예요. 고친 때를 x.edited에 적어요  → 바뀐 그 말, 바뀐 게 없으면 null
-export function editMessage(m, roomId, msgId, { text, ko } = {}, at = Date.now()) {
+export function editMessage(m, roomId, msgId, { text } = {}, at = Date.now()) {
     const { room } = roomOf(m, roomId), x = room.messages.find(y => String(y.id) === String(msgId));
     if (!x) throw new Error('메시지를 찾을 수 없습니다.');
     if (x.act || x.call) throw new Error('편집할 수 없는 메시지입니다.');
     const body = t => String(t ?? '').replace(/\r\n?/g, '\n').trim().slice(0, 4000);
     const next = text === undefined ? x.text : body(text);
     if (!one(next)) throw new Error('빈 내용으로 바꿀 수 없습니다. 삭제를 사용하세요.');
-    const said = next !== x.text, tr = ko === undefined ? (said ? '' : x.ko || '') : body(ko), kept = one(tr) && one(tr) !== one(next) ? tr : '';
-    if (!said && kept === (x.ko || '')) return null;
+    if (next === x.text) return null;
     x.text = next;
-    if (kept) x.ko = kept; else delete x.ko;
     x.edited = at;
     return x;
 }
@@ -119,14 +113,15 @@ export function swipeTo(m, roomId, dir) {
     return { at: k + 1, count: rec.list.length, fresh };
 }
 // 받아 둔 답장 목록 (아무것도 안 바꿔요): 번호순으로 [{ no (1부터, swipeInfo의 at과 같은 번호), now (지금 방에 보이는 것),
-// bubbles: [{ text, ko }] }]. 넘길 답장이 없으면 []. 글이 없는 말(폰으로 한 일만 · 통화)은 말풍선에 안 넣어요
+// bubbles: [{ text, translation }] }]. translation: 그 말에 저장된 번역 (숨긴 것은 '': 마리나라 seedFromMessages의 규칙).
+// 넘길 답장이 없으면 []. 글이 없는 말(폰으로 한 일만 · 통화)은 말풍선에 안 넣어요
 export function swipeList(m, roomId) {
     if (!liveWorld(m)?.messenger?.rooms?.[roomId]) return [];
     const { tail, rec } = endOf(m, roomId);
     if (!tail.length && !rec) return [];
     const at = rec ? rec.at : 0;
     return (rec ? rec.list.map((v, k) => (k === at ? tail : v)) : [tail]).map((v, k) => ({ no: k + 1, now: k === at,
-        bubbles: v.filter(x => !x.call && !x.act && one(x.text)).map(x => ({ text: String(x.text), ko: String(x.ko || '') })) }));
+        bubbles: v.filter(x => !x.call && !x.act && one(x.text)).map(x => ({ text: String(x.text), translation: typeof x.extra?.translation === 'string' && x.extra.translationHidden !== true ? x.extra.translation : '' })) }));
 }
 // 고른 답장들 지우기 (nos: 번호 하나 또는 여럿, 1부터). 보이는 답장을 지우면 남은 것 중 앞의 것(없으면 다음 것)이 보여요.
 // 전부 지우면 답장이 없어져요. 없는 번호는 건너뛰어요  → { dropped (지운 답장 수), at, count (남은 수: 0이면 답장이 없어요) }
@@ -153,51 +148,4 @@ export function dropOtherSwipes(m, roomId) {
     const { tail, rec } = endOf(m, roomId);
     if (!tail.length) throw new Error('남길 답장이 없습니다.');
     return dropSwipes(m, roomId, (rec ? rec.list : [null]).map((v, k) => k + 1).filter(n => n !== (rec ? rec.at : 0) + 1));
-}
-
-// 한국어를 다시 받을 말: 고른 것 중 글이 있는 말(통화 · 폰으로 한 일만 있는 말은 빼요), 방에 있는 순서대로
-//   → { owner (누구의 말투 표를 쓸지: 이 방의 폰 있는 캐릭터, 없으면 첫 캐릭터), rows: [{ x (그 말), who, to }], left (이번에 못 실은 수) }
-export function koRows(m, roomId, ids) {
-    const { w, room } = roomOf(m, roomId), want = idSet(ids), P = liveKey(w.persona);
-    const others = room.members.filter(n => liveKey(n) !== P), owner = answerers(w, room)[0] || others[0] || '';
-    const all = room.messages.filter(x => want.has(String(x.id)) && !x.call && !x.act && one(x.text));
-    const rows = all.slice(0, EDIT.max).map(x => ({ x, who: one(x.from), to: room.members.filter(n => liveKey(n) !== liveKey(x.from)).map(one).join(', ') }));
-    return { owner, rows, left: all.length - rows.length };
-}
-// 요청 하나에 실을 만큼씩 나눠요
-export function koChunks(rows) {
-    const out = [];
-    for (let i = 0; i < rows.length;) {
-        let j = i, size = 0;
-        const len = r => String(r.x.text).length;
-        while (j < rows.length && (j === i || (j - i < EDIT.lines && size + len(rows[j]) < EDIT.chars))) { size += len(rows[j]); j++; }
-        out.push({ rows: rows.slice(i, j), size });
-        i = j;
-    }
-    return out;
-}
-// 요청 글 (번역 지시문이 받는 칸 이름 그대로): owner 폰 주인; around: "[PEOPLE AROUND]…" 글 또는 '';
-// voices: [{ who, style }]; gloss: [{ src, ko }]
-export function koInput(rows, { owner = '', around = '', voices = [], gloss = [] } = {}) {
-    return [
-        `[OWNER]\n${one(owner) || 'me'}`,
-        one(around) ? String(around).trim() : '',
-        voices.length ? `[VOICES]\n${voices.map(v => `- ${one(v.who)}: ${one(v.style)}`).join('\n')}` : '',
-        gloss.length ? `[GLOSSARY]\n${gloss.map(e => `- ${e.src} = ${e.ko}`).join('\n')}` : '',
-        `[LINES]\n${rows.map((r, i) => `${i + 1}: [text · ${r.who} → ${r.to || 'self'}] ${JSON.stringify(String(r.x.text))}`).join('\n')}`,
-    ].filter(Boolean).join('\n\n');
-}
-// 답을 그 말들에 넣어요 → 바뀐 수. got: { lines: [{ n, ko }] }. 답에 없는 줄은 그대로 둬요.
-// 한국어가 원문과 같으면(이미 한국어인 말) 한국어 칸을 비워요. 원문에 없는 마침표 · 쉼표는 떼요
-export function takeKo(rows, got) {
-    let n = 0;
-    const seen = new Set();
-    for (const r of Array.isArray(got?.lines) ? got.lines : []) {
-        const row = rows[Number(r?.n) - 1], ko = row ? koLike(row.x.text, String(r?.ko ?? '').trim()).slice(0, 4000) : '';
-        if (!row || !ko || seen.has(row)) continue;
-        seen.add(row);
-        if (one(ko) === one(row.x.text)) delete row.x.ko; else row.x.ko = ko;
-        n++;
-    }
-    return n;
 }

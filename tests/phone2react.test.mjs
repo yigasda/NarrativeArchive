@@ -73,11 +73,11 @@ test('답장 넣기: 말과 같이 단 반응은 그 답장에 묶이고, 반응
     const { m, a } = world();
     const anchor = L.sendLive(m, a.id, 'Bring Kuchen mit', 1000);
     // 말과 같이
-    assert.deepEqual(R.takeReply(m, 'Mara', a.id, { state: '10:00 · home', reply: ['ok', 'which one'], react: { to: 'Ren', emoji: '❤️' }, does: [] }, { now: 2000 }), { said: 2, does: 0, state: 'home', react: '❤️' });
+    assert.deepEqual(R.takeReply(m, 'Mara', a.id, { state: '10:00 · home', reply: ['ok', 'which one'], react: { to: 'Ren', emoji: '❤️' }, does: [] }, { now: 2000 }), { said: 2, does: 0, state: 'home', react: '❤️', ids: a.messages.slice(1).map(x => x.id) });
     assert.deepEqual(anchor.reacts, [{ by: 'Mara', e: '❤️', at: 2000, via: a.messages.slice(1).map(x => x.id) }]);
     // 반응만 (상태는 있어도): 말이 안 생겨요
     const next = L.sendLive(m, a.id, 'cheesecake', 3000), n = a.messages.length;
-    assert.deepEqual(R.takeReply(m, 'Mara', a.id, { state: '10:05 · home', reply: [], react: '😎', does: [] }, { now: 4000 }), { said: 0, does: 0, state: 'home', react: '😎' });
+    assert.deepEqual(R.takeReply(m, 'Mara', a.id, { state: '10:05 · home', reply: [], react: '😎', does: [] }, { now: 4000 }), { said: 0, does: 0, state: 'home', react: '😎', ids: [] });
     assert.equal(a.messages.length, n); assert.deepEqual(next.reacts, [{ by: 'Mara', e: '😎', at: 4000 }]);
     assert.equal(E.swipeInfo(m, a.id), null);
     // 반응 + 폰으로 한 일: 말 없는 메시지(act)에 묶여요

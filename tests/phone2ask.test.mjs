@@ -37,8 +37,6 @@ const sample = () => ({
         { title: "Ren's dentist", what: 'her dentist wants to see her once more next week', state: 'planned', known: 'the dentist told her to come back next week', open: 'which day, what time' },
     ],
     card: '\n(카드 본문)\n',
-    voices: [{ who: 'Lio', style: '극도로 절제된 격식체 존댓말, 짧은 명령형. 문장 끝에 마침표를 꼭 찍음. Ren에게는 이름을 부르며 조용한 어조로 반응함.' },
-        { who: 'Mara', to: 'Ren', style: '엄마인 Ren에게 기본적으로 다정한 존댓말(~해요, 엄마)을 쓰지만, Ren이 잔소리를 하면 퉁명스러운 반말(~잖아, 됐어)로 툴툴거림. 프랑스어/영어 동시 사용' }],
     around: '[PEOPLE AROUND]\n- Ren: your mother, in Seoul.\n- Ivo: your ex; you lost interest long ago. Lately he has been sending your mother gifts and keeping in touch with her behind your back.\n- Lio Varo: your father, head of Varo Textiles.',
 });
 
@@ -49,12 +47,12 @@ test('실험에서 보낸 요청과 글자 하나까지 같아요', () => {
 });
 
 test('없는 블록은 안 보내요; 가끔 가는 블록은 자리와 이름이 정해져 있어요', () => {
-    const d = { ...sample(), langs: null, weather: '', voices: [], recent: [], card: '', around: '', situations: [] };
+    const d = { ...sample(), langs: null, weather: '', recent: [], card: '', around: '', situations: [] };
     const t = A.replyInput(d);
     assert.deepEqual(t.match(/^\[[^\]]+\]$/gm), ['[MESSENGER]', '[NOW]', "[OWNER'S CLOCK]", '[SITUATIONS]']);
     assert.match(t, /\[SITUATIONS\]\n\(none on the phone yet\)$/);
     const all = A.replyInput({ ...sample(), summary: 'Yesterday: …', blind: "[OWNER DOESN'T KNOW]\n- x", story: '## #0–#3 — s\n- a', before: 'Ren: see you Friday', typed: ['보고 싶', ' '], why: 'just woke up' });
-    assert.deepEqual(all.match(/^\[[^\]]+\]$/gm), ['[LANGUAGES]', '[MESSENGER]', '[CHAT SUMMARY]', '[NOW]', "[OWNER'S CLOCK]", '[WEATHER NOW]', '[RECENT ON THE PHONE]', '[SITUATIONS]', "[Mara's card]", '[VOICES]', '[PEOPLE AROUND]', "[OWNER DOESN'T KNOW]", '[STORY]', '[LAST MESSAGES]', '[TYPED AND DELETED]', '[WHY NOW]']);
+    assert.deepEqual(all.match(/^\[[^\]]+\]$/gm), ['[LANGUAGES]', '[MESSENGER]', '[CHAT SUMMARY]', '[NOW]', "[OWNER'S CLOCK]", '[WEATHER NOW]', '[RECENT ON THE PHONE]', '[SITUATIONS]', "[Mara's card]", '[PEOPLE AROUND]', "[OWNER DOESN'T KNOW]", '[STORY]', '[LAST MESSAGES]', '[TYPED AND DELETED]', '[WHY NOW]']);
     assert.ok(all.includes('[STORY]\n## #0–#3 — s\n- a\n\n[LAST MESSAGES]\nRen: see you Friday\n\n[TYPED AND DELETED]'));
     assert.match(all, /\[TYPED AND DELETED\]\n- 보고 싶\n\n\[WHY NOW\]\njust woke up$/);
     assert.doesNotMatch(all, /\n\n\n/);
@@ -69,7 +67,10 @@ test('NOW: 처음 메신저 대화, 이야기에서 모르던 사이, 오늘 일
 test('지시문이 말하는 블록 이름과 같아요 (YOU GET)', async () => {
     const { phone2ReplySystem } = await import('../src/phone2reply.js');
     const sys = phone2ReplySystem({ owner: 'Mara', persona: 'Ren' }), get = sys.slice(sys.indexOf('YOU GET'), sys.indexOf('STATE FIRST'));
-    for (const b of ['LANGUAGES', 'MESSENGER', 'CHAT SUMMARY', 'NOW', "OWNER'S CLOCK", 'WEATHER NOW', 'RECENT ON THE PHONE', 'SITUATIONS', "Mara's card", 'VOICES', 'PEOPLE AROUND', "OWNER DOESN'T KNOW", 'STORY', 'LAST MESSAGES', 'TYPED AND DELETED', 'WHY NOW']) assert.ok(get.includes(b), b);
+    for (const b of ['LANGUAGES', 'MESSENGER', 'CHAT SUMMARY', 'NOW', "OWNER'S CLOCK", 'WEATHER NOW', 'RECENT ON THE PHONE', 'SITUATIONS', "Mara's card", 'PEOPLE AROUND', "OWNER DOESN'T KNOW", 'STORY', 'LAST MESSAGES', 'TYPED AND DELETED', 'WHY NOW']) assert.ok(get.includes(b), b);
+    // (the Korean of the reply is gone — Marinara's translation does it now —, and so is the block that was for it alone)
+    assert.ok(!sys.includes('VOICES') && !sys.includes('"ko"') && !/Korean/.test(sys));
+    assert.ok(!A.replyInput({ ...sample(), voices: [{ who: 'Lio', style: 'x' }] }).includes('[VOICES]'));
 });
 
 test('폰 1은 이 파일을 안 불러요', async () => {

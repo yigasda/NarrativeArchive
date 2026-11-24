@@ -74,7 +74,9 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.match(s, /"state": where you are, what you are doing and until when/);
     assert.match(s, /Your last status is only where you started; as the hours pass, your day moves on \(a nurse who began at home before a night shift is on the ward by 22:00\)\. Then the texts, from there\./);
     assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in and those you know but seldom use, as set on the phone\./);
-    assert.match(s, /\n- "reply" in one of the languages you text in, or a mix of two naturally; very rarely, one you know but seldom use\. With no LANGUAGES, the language you really text Ren in\.\n- "ko": the same bubbles in Korean, the way VOICES says you sound, each with its bubble's own punctuation: no full stop or comma the bubble doesn't have; "" for a bubble already in Korean\.\n/);
+    assert.match(s, /\n- "reply" in one of the languages you text in, or a mix of two naturally; very rarely, one you know but seldom use\. With no LANGUAGES, the language you really text Ren in\.\n\nTHE PHONE/);
+    // (the Korean of a reply is Marinara's translation's now — phone2translate.js —: the prompt asks for none, and VOICES, which was for it alone, is not sent)
+    assert.doesNotMatch(s, /"ko"|VOICES|Korean/);
     assert.match(s, /\n"does":\n- What you do or leave on the phone right now because of this moment\. Most moments leave something small; \[\] only when truly nothing\. One short line each, with what it needs \(an amount, a shop, a person\)\. Name the act itself \(not "checks the parking charge" but "pays 3 EUR for parking"\)\. What follows from it by itself \(receipts, mails, charges, tickets\) fills in later\.\n- Look at RECENT ON THE PHONE: you seldom reach for the same app again so soon \(a third note within the hour\); the moment may call for another\.\n/);
     assert.doesNotMatch(s, /Opening or checking/);
     // (문자답게: 말풍선 끝 마침표 · 쉼표를 안 쓰고, 기분대로 흐트러지고, 반듯한 글은 누가 봐도 그런 사람만. 지금까지의 문자를 따르는 줄보다 앞에)
@@ -83,7 +85,7 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.match(s, /\n- MESSENGER: your chat with Ren so far, newest last, each turn with its time and your status then, and after it in \[ \] the emoji anyone reacted to it with \(new: put there since you last texted\)\./);
     assert.match(s, /WHY NOW \(Ren sent no new text: you write first for this reason, or it is what Ren just did\)\./);
     assert.match(s, /\n- An emoji on the last text someone sent, when it truly fits how you feel right then: "react", who sent it and the emoji\. Along with what you text, or by itself\. Or none: ""\.\n/);
-    assert.match(s, /\n {2}"ko": the same bubbles in Korean,\n {2}"react": "" or \{ "to": "Ren", "emoji": "…" \},\n/);
+    assert.match(s, /\n {2}"reply": the words you type now, one bubble each, none already in MESSENGER,\n {2}"react": "" or \{ "to": "Ren", "emoji": "…" \},\n/);
     // (run1 again: the apps' last times only; a list of what is on the phone drew more of the same)
     assert.match(s, /- RECENT ON THE PHONE: when you last used each app\./);
     assert.match(s, /\n- Bank, cards & wallet: when money moves, however small \(a parking fee, a newspaper\): you pay, send, get paid, top up, use a ticket\.\n/);
@@ -128,16 +130,3 @@ test('mail: a mail the owner sends keeps "to", its Korean is the owner\'s voice 
     assert.match(data.coreRecordsSystem({ life: true, wallet: true, split: true }), /mail: "sender", "to": only on a mail the owner sends \("sender" is then the owner\), "subject" \("Re: …" for an answer\)/);
 });
 
-test('폰 2 ko: "" for a bubble already in Korean is that bubble; the others keep their Korean, in order', async () => {
-    const { phone2Ko } = await import('../src/phone2reply.js');
-    assert.deepEqual(phone2Ko(['Bin gleich da', '응 알았어', 'See you'], ['곧 도착해', '', '이따 봐']), ['곧 도착해', '응 알았어', '이따 봐']);
-    assert.deepEqual(phone2Ko(['Ok', '좋아'], ['알겠어']), ['알겠어', '좋아']);
-    assert.deepEqual(phone2Ko([], []), []);
-    // 번역은 원문과 같은 모양으로: 원문에 없는 마침표 · 쉼표는 떼요 (말줄임표 · 소수점 · 주소의 점 · 천 단위 쉼표 · 물음표는 그대로)
-    const { koLike } = await import('../src/phone2reply.js');
-    for (const [text, ko, want] of [['yeah ok', '응. 알았어.', '응 알았어'], ['I was thinking maybe we should go', '생각해 봤는데, 우리 가는 게 좋겠어.', '생각해 봤는데 우리 가는 게 좋겠어'],
-        ['Have you eaten dinner yet', '저녁은 챙겨 먹었어?', '저녁은 챙겨 먹었어?'], ['Fine.', '알았어.', '알았어.'], ['No. Stop it', '아니. 그만해.', '아니. 그만해'],
-        ['wait... what', '잠깐... 뭐라고.', '잠깐... 뭐라고'], ['hm', '음…', '음…'], ['it costs 3.5 EUR, ok', '3.5유로야, 알겠지.', '3.5유로야, 알겠지'], ['1,000 won', '1,000원이야, 응.', '1,000원이야 응'],
-        ['see naver.com', 'naver.com 봐.', 'naver.com 봐'], ['line one\nline two', '첫 줄.\n둘째 줄, 응.', '첫 줄\n둘째 줄 응'], ['そうだね', '그러네。', '그러네'], ['ok', '', ''], ['Yes, fine.', '응, 좋아.', '응, 좋아.']])
-        assert.equal(koLike(text, ko), want, text);
-});

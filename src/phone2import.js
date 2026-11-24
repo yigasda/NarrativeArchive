@@ -148,7 +148,8 @@ export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
     let first = null, top = null, count = 0, topAt = 0;
     for (const r of list) r.bubbles.forEach((b, k) => {
         const n = liveNo(w), at = r.at + k;
-        const msg = { id: `i${now.toString(36)}${n.toString(36)}${Math.random().toString(36).slice(2, 6)}`, n, from: r.user ? w.persona : r.name, text: b.text, at, ...(b.ko ? { ko: b.ko } : {}), told: now, imp: r.i };
+        // (the add-on's Korean goes where Marinara keeps a message's translation: its extra, with the words it translates)
+        const msg = { id: `i${now.toString(36)}${n.toString(36)}${Math.random().toString(36).slice(2, 6)}`, n, from: r.user ? w.persona : r.name, text: b.text, at, ...(b.ko ? { extra: { translation: b.ko, translationSource: b.text } } : {}), told: now, imp: r.i };
         // (among the talk already there by its time; said at the same moment, after it)
         let at0 = msgs.length;
         while (at0 > 0 && (msgs[at0 - 1].at || 0) > at) at0--;

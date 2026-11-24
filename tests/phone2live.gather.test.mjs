@@ -49,7 +49,9 @@ test('앱마다 마지막 쓴 때: 폰 기록과 답하며 한 일(does)을 합�
     const d = ask(world()), text = replyInput(d);
     assert.match(text, /\[RECENT ON THE PHONE\]\nbank, cards & wallet 12:41 · photos 11:10 · messages 08:15 · mail 06:10 · notes 11-05 21:00\n/);
     assert.match(text, /\[WEATHER NOW\]\nLyon · 흐림 · 7° \(최고 9° · 최저 3°\) · 비 확률 20%\n/);
-    assert.match(text, /\[SITUATIONS\]\n- Flight to Seoul: Mon 11-09 17:45\. state: planned\. known: booked\.\n\n\[Mara's card\]\nMara is careful with money\.\n\n\[VOICES\]\n- Mara → Ren: 다정한 존댓말\n\n\[PEOPLE AROUND\]/);
+    assert.match(text, /\[SITUATIONS\]\n- Flight to Seoul: Mon 11-09 17:45\. state: planned\. known: booked\.\n\n\[Mara's card\]\nMara is careful with money\.\n\n\[PEOPLE AROUND\]/);
+    // (the phone's voice table was for the reply's Korean alone: not sent any more — Marinara's translation does it)
+    assert.doesNotMatch(text, /VOICES|다정한 존댓말/);
     assert.match(text, /\[OWNER'S CLOCK\]\nPhone owner: Mara\nTime now: 11-06 14:00\n/);
     assert.doesNotMatch(text, /old story text|not yet|made up|done thing/);
 });
