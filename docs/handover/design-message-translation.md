@@ -18,7 +18,7 @@
 - import에서 `liveRetranslate`를 빼고 번역 함수를 넣었어요(안 빼면 폰이 아예 안 떠요).
 - 방을 그릴 때 `liveTranslationOpen(realM, r.id)`, 말마다 `liveTranslationView(realM, r.id, x)`:
   `text: tv.displayedContent`, `ko: tv.translationBlock?.text`, `open: true`, `wait: tv.isTranslating`. 고치는 중인 말은 원문만.
-- 길게 누르기의 번역(`na_ob_mtr`) → `liveTranslate`(마리나라 단추: 번역 · 숨기기). 여러 개 번역(`na_ob_ptr`)도 지금은 같은 함수로 돌지만, 마리나라에 없는 기능이라 빼 주세요(3장).
+- 길게 누르기의 번역(`na_ob_mtr`) → `liveTranslate`(마리나라 단추: 번역 · 숨기기). 여러 개 번역(`na_ob_ptr`)도 같은 함수로 돌아요. 이건 남겨요(3장).
 - 고치기: 한국어 칸 · 고친 뒤 자동 재번역을 뺐어요.
 - 보내기(`obSend`): 내 메시지 번역이 켜져 있으면 `livePrepareInput`으로 번역한 글을 보내요(실패하면 원문 + 알림은 함수가 해요).
 - 찾기: 저장된 번역도 찾아요(숨긴 것 빼고).
@@ -76,7 +76,7 @@
   - 번역 칸: `v.translationBlock`이 있으면 말풍선 안 원문 아래에 **위에 가는 선(테두리) 하나 + 번역 글**(줄바꿈 그대로). `translating`이면 글 대신 **"번역 중…"**("Translating…", 작게 · 기울여 · 흐리게).
   - 전의 "한국어 보기" 전체 토글(`koOn`)과 말마다 접기(`obOpen`)는 마리나라에 없어요: Orbit에서는 빼 주세요(지금은 `open: true`로 늘 보여요). 폰 1의 한국어 보기는 그대로예요.
 - 번역 단추(액션 줄, 아이콘 Languages): 제목은 `v.buttonTitle` — 번역이 보이면 **"번역 숨기기"**("Hide translation"), 아니면 **"번역"**("Translate"). 누르면 `liveTranslate(real, 방 id, x.id, { onChange: 다시 그리기 })`. 실패 알림은 함수가 해요.
-- **여러 개 골라 번역(`na_ob_ptr`, 옛 "재번역")은 메신저에서 빼 주세요** (마리나라에 없는 기능이에요: 메신저 번역은 마리나라와 한 글자도 다르지 않게). 고르기 줄의 번역 단추(`phoneorbit.js` 192 · 294줄)와 `phone.js`의 `.na_ob_ptr` 처리를 없애요. 말마다의 번역 단추(`na_ob_mtr`)는 그대로예요.
+- **여러 개 골라 번역(`na_ob_ptr`, 옛 "재번역")은 남겨요** (소망, 2026-11-24: 빼지 않음). 고른 말마다 마리나라 번역 단추와 같은 일(`liveTranslate`: 번역 · 이미 번역이 보이면 숨기기)을 해요. 글은 "재번역" 대신 마리나라 단추 글("번역" · "번역 숨기기")에 맞추고, 한꺼번에 보내는 수는 막아 주세요(모델에 동시에 너무 많이 가지 않게). 말마다의 번역 단추(`na_ob_mtr`)도 그대로예요.
 - 고치기 칸: 한국어 칸을 빼 주세요(`ob_fk`).
 - 받아 둔 답장 목록: 말풍선의 `translation`을 전의 `ko` 자리에. (반영 쪽이 `phone.js` 469줄에서 `ko: b.translation`으로 이어 두어서 지금도 보여요. 다시 그릴 때 `translation`을 직접 읽어도 돼요)
 - 복사(`na_ob_mcopy`): 마리나라처럼 **보이는 글**을 복사해요(번역만 표시일 때는 번역: `liveTranslationView(…).displayedContent`). 반영 쪽이 `phone.js`에 이어 두었어요.
